@@ -17,10 +17,10 @@
 
 ## 3. Cliente persistente
 
-- [ ] 3.1 `_ClientPool` thread-safe: mapa session_id→ClaudeSDKClient, LRU+TTL configurables, disconnect en evicción, cierre en atexit
-- [ ] 3.2 Integración en `_arun_query`/`_astream`: reutilizar cliente vivo en resolución resume; registrar cliente al terminar run; degradación a stateless si el pool falla
-- [ ] 3.3 `interrupt(session_id=None)` y `set_model()` en caliente
-- [ ] 3.4 Tests de integración: latencia multi-turn (persistente < stateless), interrupt + invoke posterior, evicción, default intacto
+- [x] 3.1 `_ClientPool` thread-safe: mapa session_id→ClaudeSDKClient, LRU+TTL configurables, disconnect en evicción, cierre en atexit
+- [x] 3.2 Integración en `_arun_query`/`_astream`: reutilizar cliente vivo en resolución resume; registrar cliente al terminar run; degradación a stateless si el pool falla
+- [x] 3.3 `interrupt(session_id=None)` y `set_model()` en caliente
+- [x] 3.4 Tests de integración: latencia multi-turn (persistente < stateless), interrupt + invoke posterior, evicción, default intacto
 
 ## 4. Paridad restante
 

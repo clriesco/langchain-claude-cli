@@ -171,7 +171,9 @@ def make_store(spec: str | SessionStoreBackend | None) -> SessionStoreBackend:
     if spec == "file":
         return FileStore()
     if isinstance(spec, str):
-        raise ValueError(f"Unknown session_store {spec!r}; use 'memory', 'file' or an instance")
+        raise ValueError(
+            f"Unknown session_store {spec!r}; use 'memory', 'file' or an instance"
+        )
     return spec
 
 

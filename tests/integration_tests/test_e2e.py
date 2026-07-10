@@ -337,3 +337,55 @@ def test_history_replay_mode(llm):
         ]
     )
     assert "KRAKEN" in _text(r.content).upper()
+
+
+# ── v0.2: persistent client ──────────────────────────────────
+
+
+def test_persistent_multiturn_reuses_client():
+    import time as _time
+
+    llm = ChatClaudeCli(model=MODEL, persistent=True)
+    try:
+        h1 = HumanMessage(content="My lucky number is 13. Say OK.")
+        a1 = llm.invoke([h1])
+        _time.sleep(1.5)  # let the warm-up connect finish
+        t0 = _time.time()
+        r = llm.invoke(
+            [h1, a1, HumanMessage(content="Lucky number plus 1? Digits only.")]
+        )
+        reuse_latency = _time.time() - t0
+        assert "14" in _text(r.content)
+        assert len(llm._pool) >= 1, "pool never warmed"
+        assert reuse_latency < 10
+        assert r.response_metadata["session_id"] == a1.response_metadata["session_id"]
+    finally:
+        llm._pool.close()
+
+
+def test_persistent_interrupt_then_next_invoke():
+    import threading as _threading
+    import time as _time
+
+    llm = ChatClaudeCli(model=MODEL, persistent=True)
+    try:
+        h1 = HumanMessage(content="Say READY.")
+        a1 = llm.invoke([h1])
+        _time.sleep(1.5)
+        done = []
+        history = [
+            h1,
+            a1,
+            HumanMessage(content="Count slowly from 1 to 500, one per line."),
+        ]
+        t = _threading.Thread(target=lambda: done.append(llm.invoke(history)))
+        t.start()
+        _time.sleep(4)
+        llm.interrupt()
+        t.join(timeout=30)
+        assert not t.is_alive(), "interrupt did not end the generation"
+        # The conversation still works after the interrupt
+        r = llm.invoke([h1, a1, HumanMessage(content="Say DONE.")])
+        assert "DONE" in _text(r.content).upper()
+    finally:
+        llm._pool.close()

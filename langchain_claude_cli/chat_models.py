@@ -50,6 +50,7 @@ from langchain_claude_cli._convert import (
     strip_tool_namespace,
     usage_to_usage_metadata,
 )
+from langchain_claude_cli._pool import ClientPool
 from langchain_claude_cli._sessions import Resolution, SessionCache, make_store
 from langchain_claude_cli.exceptions import (
     ClaudeCliBudgetExceededError,
@@ -236,8 +237,16 @@ class ChatClaudeCli(BaseChatModel):
     """Prefix-cache backend: "memory" (default), "file" (persistent JSON in
     ~/.langchain-claude-cli/, conversations survive restarts) or a
     SessionStoreBackend instance."""
+    persistent: bool = False
+    """Keep a live ClaudeSDKClient per conversation: multi-turn resumes skip
+    the subprocess restart (~2x faster per reused turn, spike S8) and enable
+    interrupt()/set_model(). Plain conversation turns only — tool-calling
+    cycles use the stateless path. For processes with a controlled lifetime."""
+    pool_max_clients: int = 4
+    pool_ttl: float = 300.0
 
     _session_cache: SessionCache = PrivateAttr(default=None)  # type: ignore[assignment]
+    _pool: ClientPool | None = PrivateAttr(default=None)
 
     # ── Compat warnings ──────────────────────────────────────
 
@@ -263,7 +272,38 @@ class ChatClaudeCli(BaseChatModel):
                     "but the Claude CLI does not support it; the parameter is ignored.",
                 )
         self._session_cache = SessionCache(store=make_store(self.session_store))
+        if self.persistent:
+            self._pool = ClientPool(self.pool_max_clients, self.pool_ttl)
         return self
+
+    def _options_sig(self) -> str:
+        """Client reuse is only valid when the run configuration matches."""
+        return json.dumps(
+            [
+                self.model,
+                self.effort,
+                self.thinking,
+                self.system_prompt,
+                self.builtin_tools,
+                self.permission_mode,
+                self.cwd,
+            ],
+            default=str,
+        )
+
+    def interrupt(self, session_id: str | None = None) -> None:
+        """Cancel the active run of a persistent conversation (persistent=True)."""
+        if self._pool is None:
+            raise ClaudeCliError("interrupt() requires persistent=True")
+        self._pool.interrupt(session_id)
+
+    def set_session_model(
+        self, model: str | None, session_id: str | None = None
+    ) -> None:
+        """Hot-swap the model of a persistent conversation (persistent=True)."""
+        if self._pool is None:
+            raise ClaudeCliError("set_session_model() requires persistent=True")
+        self._pool.set_model(model, session_id)
 
     # ── LangChain plumbing ───────────────────────────────────
 
@@ -738,6 +778,23 @@ class ChatClaudeCli(BaseChatModel):
             )
             system = f"{system}\n\n{instruction}" if system else instruction
 
+        # Persistent fast path (D4): plain conversation turn on a live client.
+        if (
+            self._pool is not None
+            and resolution.strategy == "resume"
+            and resolution.session_id
+            and not tool_schemas
+            and not delivery.tool_results
+            and not kwargs.get("output_format")
+            and entries
+        ):
+            pooled = await self._pool.run_turn(
+                resolution.session_id, self._options_sig(), entries
+            )
+            if pooled is not None:
+                pooled_msgs, pooled_result, pooled_rate = pooled
+                return pooled_msgs, pooled_result, delivery, resolution, pooled_rate
+
         options = self._build_options(
             system=system,
             resume=resolution.session_id,
@@ -876,6 +933,15 @@ class ChatClaudeCli(BaseChatModel):
                 session_id,
                 thread_id=self._thread_id(kwargs.get("config")),
             )
+            if self._pool is not None and not kwargs.get("tools") and not deferred:
+                # Warm a live client for the next turn (fire-and-forget).
+                warm_options = self._build_options(
+                    system=None,
+                    resume=session_id,
+                    tool_schemas=None,
+                    delivery=ConvertedHistory(),
+                )
+                self._pool.warm(session_id, warm_options, self._options_sig())
 
         return ChatResult(
             generations=[
