@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          uv venv
+          uv pip install -e . --group test --group lint --group typing
+      - name: Lint
+        run: .venv/bin/ruff check langchain_claude_cli tests
+      - name: Format check
+        run: .venv/bin/ruff format --check langchain_claude_cli tests
+      - name: Type check
+        run: .venv/bin/mypy langchain_claude_cli
+      - name: Unit tests
+        run: .venv/bin/pytest tests -q
+
+  # Integration tests need an authenticated claude CLI (Pro/Max) — run
+  # manually on a machine with credentials:  pytest tests -m integration
