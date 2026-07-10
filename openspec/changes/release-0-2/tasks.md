@@ -28,6 +28,8 @@
 - [ ] 4.2 Bloques Files API en `_convert.py` (según S7): passthrough / materialización con API key / omisión con warning
 - [ ] 4.3 Cablear `ChatModelIntegrationTests` de langchain-tests con xfails documentados de niveles B/C
 - [ ] 4.4 Tests unitarios de 4.1-4.2
+- [ ] 4.5 Taxonomía de excepciones tipadas: `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError` mapeadas desde `api_error_status` y excepciones del SDK (para políticas de fallback tipo EC-30 sin clasificar texto) + tests
+- [ ] 4.6 Blindaje OAuth: spike de si `env={"ANTHROPIC_API_KEY": ""}` la anula para el CLI; parámetro `auth="oauth"|"inherit"` (default `"oauth"` que garantiza que el subproceso no use API key) + test que verifica que con key en el entorno se factura a la suscripción
 
 ## 5. Middleware
 
