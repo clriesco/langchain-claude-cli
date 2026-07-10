@@ -2,10 +2,10 @@
 
 ## 1. Spikes
 
-- [ ] 1.1 S6 — ¿Emite el CLI `RateLimitEvent` en modo no-interactivo? Script `spikes/s6_ratelimit.py`; conclusión en `spikes/FINDINGS.md`
-- [ ] 1.2 S7 — ¿Acepta el input stream-json bloques `source: {"type": "file", "file_id": ...}`? Script `spikes/s7_files_api.py`; decide passthrough vs materialización vs omisión
-- [ ] 1.3 S8 — `ClaudeSDKClient`: medir latencia multi-turn reutilizado vs `query()` con resume; validar `interrupt()` y `set_model()`; conclusión en FINDINGS
-- [ ] 1.4 Revisar FINDINGS y ajustar design si algún spike contradice D4/D6
+- [x] 1.1 S6 — ¿Emite el CLI `RateLimitEvent` en modo no-interactivo? Script `spikes/s6_ratelimit.py`; conclusión en `spikes/FINDINGS.md`
+- [x] 1.2 S7 — ¿Acepta el input stream-json bloques `source: {"type": "file", "file_id": ...}`? Script `spikes/s7_files_api.py`; decide passthrough vs materialización vs omisión
+- [x] 1.3 S8 — `ClaudeSDKClient`: medir latencia multi-turn reutilizado vs `query()` con resume; validar `interrupt()` y `set_model()`; conclusión en FINDINGS
+- [x] 1.4 Revisar FINDINGS y ajustar design si algún spike contradice D4/D6
 
 ## 2. Sesiones persistentes
 
@@ -24,12 +24,12 @@
 
 ## 4. Paridad restante
 
-- [ ] 4.1 `RateLimitEvent` → `response_metadata["rate_limit"]` (según S6)
-- [ ] 4.2 Bloques Files API en `_convert.py` (según S7): passthrough / materialización con API key / omisión con warning
+- [x] 4.1 `RateLimitEvent` → `response_metadata["rate_limit"]` (según S6)
+- [x] 4.2 Bloques Files API en `_convert.py` (según S7): passthrough / materialización con API key / omisión con warning
 - [ ] 4.3 Cablear `ChatModelIntegrationTests` de langchain-tests con xfails documentados de niveles B/C
-- [ ] 4.4 Tests unitarios de 4.1-4.2
-- [ ] 4.5 Taxonomía de excepciones tipadas: `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError` mapeadas desde `api_error_status` y excepciones del SDK (para políticas de fallback tipo EC-30 sin clasificar texto) + tests
-- [ ] 4.6 Blindaje OAuth: spike de si `env={"ANTHROPIC_API_KEY": ""}` la anula para el CLI; parámetro `auth="oauth"|"inherit"` (default `"oauth"` que garantiza que el subproceso no use API key) + test que verifica que con key en el entorno se factura a la suscripción
+- [x] 4.4 Tests unitarios de 4.1-4.2
+- [x] 4.5 Taxonomía de excepciones tipadas: `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError` mapeadas desde `api_error_status` y excepciones del SDK (para políticas de fallback tipo EC-30 sin clasificar texto) + tests
+- [x] 4.6 Blindaje OAuth: spike de si `env={"ANTHROPIC_API_KEY": ""}` la anula para el CLI; parámetro `auth="oauth"|"inherit"` (default `"oauth"` que garantiza que el subproceso no use API key) + test que verifica que con key en el entorno se factura a la suscripción
 
 ## 5. Middleware
 

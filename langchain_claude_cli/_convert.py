@@ -12,6 +12,7 @@ response_metadata.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -47,8 +48,17 @@ def canonical_args(args: Any) -> str:
 # ── LangChain -> CLI ─────────────────────────────────────────
 
 
-def _human_item_to_block(item: str | dict) -> dict:
-    """Convert one HumanMessage content item to an Anthropic content block."""
+FileResolver = Callable[[str], dict | None]
+"""file_id -> materialized base64 content block, or None if unavailable."""
+
+
+def _human_item_to_block(
+    item: str | dict, file_resolver: FileResolver | None = None
+) -> dict | None:
+    """Convert one HumanMessage content item to an Anthropic content block.
+
+    Returns None for blocks that must be dropped (unresolvable file_id).
+    """
     if isinstance(item, str):
         return {"type": "text", "text": item}
     kind = item.get("type", "")
@@ -70,6 +80,27 @@ def _human_item_to_block(item: str | dict) -> dict:
             }
         return {"type": "image", "source": {"type": "url", "url": url}}
     if kind in ("image", "document"):
+        source = item.get("source", {})
+        if isinstance(source, dict) and source.get("type") == "file":
+            # Files API block: a file_id belongs to an API account and cannot
+            # resolve under the CLI's OAuth session (spike S7) — materialize
+            # via the resolver (Anthropic API) or drop with a warning.
+            resolved = (
+                file_resolver(source.get("file_id", "")) if file_resolver else None
+            )
+            if resolved is None:
+                from langchain_claude_cli._compat import warn_once
+
+                warn_once(
+                    "files_api",
+                    "A Files API block (file_id) could not be materialized — "
+                    "the CLI's OAuth session cannot access API file storage. "
+                    "Provide ANTHROPIC_API_KEY (used ONLY to download the file, "
+                    "never passed to the CLI) or inline the content as base64. "
+                    "The block was omitted.",
+                )
+                return None
+            return resolved
         return {k: v for k, v in item.items() if k != "cache_control"}
     if (
         kind == "file"  # langchain-core v1 standard file block
@@ -87,10 +118,13 @@ def _human_item_to_block(item: str | dict) -> dict:
     return {"type": "text", "text": str(item)}
 
 
-def _human_content_to_blocks(content: str | list) -> list[dict]:
+def _human_content_to_blocks(
+    content: str | list, file_resolver: FileResolver | None = None
+) -> list[dict]:
     if isinstance(content, str):
         return [{"type": "text", "text": content}]
-    return [_human_item_to_block(item) for item in content]
+    blocks = [_human_item_to_block(item, file_resolver) for item in content]
+    return [b for b in blocks if b is not None]
 
 
 def _ai_message_to_blocks(msg: AIMessage) -> list[dict]:
@@ -168,7 +202,9 @@ def _tool_message_text(msg: ToolMessage) -> str:
     return "\n".join(parts)
 
 
-def convert_lc_messages(messages: list[BaseMessage]) -> ConvertedHistory:
+def convert_lc_messages(
+    messages: list[BaseMessage], file_resolver: FileResolver | None = None
+) -> ConvertedHistory:
     """Convert LangChain messages into CLI stream entries + tool-result map."""
     out = ConvertedHistory()
     call_names: dict[str, str] = {}
@@ -220,7 +256,7 @@ def convert_lc_messages(messages: list[BaseMessage]) -> ConvertedHistory:
                     "type": "user",
                     "message": {
                         "role": "user",
-                        "content": _human_content_to_blocks(msg.content),
+                        "content": _human_content_to_blocks(msg.content, file_resolver),
                     },
                 }
             )
@@ -375,6 +411,17 @@ def usage_to_usage_metadata(usage: dict[str, Any] | None) -> UsageMetadata | Non
             "cache_creation": cache_creation,
         }
     return meta
+
+
+def rate_limit_to_meta(event: Any) -> dict[str, Any]:
+    """RateLimitEvent -> response_metadata["rate_limit"] dict (spike S6)."""
+    info = getattr(event, "rate_limit_info", None) or event
+    return {
+        "status": getattr(info, "status", None),
+        "type": getattr(info, "rate_limit_type", None),
+        "utilization": getattr(info, "utilization", None),
+        "resets_at": getattr(info, "resets_at", None),
+    }
 
 
 def result_to_response_metadata(result: Any, model: str) -> dict[str, Any]:

@@ -1,9 +1,14 @@
 """langchain-claude-cli — ChatAnthropic drop-in backed by the Claude Code CLI."""
 
 from langchain_claude_cli._compat import ClaudeCliCompatWarning
-from langchain_claude_cli.chat_models import (
-    ChatClaudeCli,
+from langchain_claude_cli.chat_models import ChatClaudeCli
+from langchain_claude_cli.exceptions import (
+    ClaudeCliAuthError,
     ClaudeCliBudgetExceededError,
+    ClaudeCliError,
+    ClaudeCliOverloadedError,
+    ClaudeCliRateLimitError,
+    ClaudeCliTimeoutError,
 )
 from langchain_claude_cli.tools import (
     ALL_TOOLS,
@@ -21,7 +26,12 @@ __all__ = [
     "SHELL_TOOLS",
     "WRITE_TOOLS",
     "ChatClaudeCli",
+    "ClaudeCliAuthError",
     "ClaudeCliBudgetExceededError",
     "ClaudeCliCompatWarning",
+    "ClaudeCliError",
+    "ClaudeCliOverloadedError",
+    "ClaudeCliRateLimitError",
+    "ClaudeCliTimeoutError",
     "ClaudeTool",
 ]

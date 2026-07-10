@@ -52,3 +52,27 @@ Con `include_partial_messages=True`, `StreamEvent.event` trae el stream raw de l
 3. **D3/tool_choice**: `parallel_tool_calls` nativo — solo `strict` queda degradado.
 4. **D4 rama 2**: fallback para historial arbitrario = structured flatten (un solo user message multimodal); replay multi-mensaje disponible pero costoso, no default.
 5. **D6**: `effort` sin mapeo — los 5 niveles coinciden exactamente.
+
+---
+
+# Spikes v0.2 (release-0-2)
+
+## S6 — RateLimitEvent en modo no-interactivo (`s6_ratelimit.py`) ✅ SE EMITE
+
+- Cada run del SDK emite `RateLimitEvent` con `rate_limit_info`: `status` ('allowed'/'allowed_warning'/'rejected'), `resets_at` (epoch), `rate_limit_type` ('five_hour'...), `utilization` (puede ser None), `overage_status` y `raw`. Implementable tal cual (task 4.1).
+
+## S7 — Files API `file_id` (`s7_files_api.py`) ⚠️ FORMATO ACEPTADO, CONTENIDO IRRESOLUBLE BAJO OAUTH
+
+- El input stream-json ACEPTA `source: {"type": "file", "file_id": ...}` (sin rechazo de formato), pero la API elimina el documento ("could not be processed and was removed") — un file_id pertenece a una cuenta API, no a la suscripción OAuth.
+- **Decisión D6 refinada**: passthrough descartado (degradación confusa). Implementar: materializar vía cliente anthropic si hay `ANTHROPIC_API_KEY` disponible **para ese fin** (sin filtrarla al subproceso); si no, `ClaudeCliCompatWarning` + bloque omitido.
+
+## S8 — Cliente persistente (`s8_persistent_client.py`) ✅ TODO VALIDADO
+
+- Latencia: reuso ~1.4-1.5s vs ~2.8s de `query()`+resume → **~1.9×** por turno reutilizado.
+- `interrupt()` termina el stream limpiamente; `set_model("claude-sonnet-4-5")` cambia de modelo en caliente en la misma sesión y el siguiente query responde con el modelo nuevo.
+
+## S9 — Blindaje OAuth (`s9_env_key.py`, task 4.6) ✅ LEAK CONFIRMADO Y NEUTRALIZABLE
+
+- Con `ANTHROPIC_API_KEY` (falsa) en el entorno del proceso, el CLI la usa y el run falla — el propio CLI avisa: *"ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login"*. Confirma el incidente de billing reportado downstream.
+- `options.env = {"ANTHROPIC_API_KEY": ""}` **neutraliza** la herencia: el run funciona por OAuth.
+- **Implementación 4.6**: `auth="oauth"` (default) inyecta `ANTHROPIC_API_KEY=""` y `ANTHROPIC_AUTH_TOKEN=""` en `options.env` salvo que el usuario los haya definido explícitamente en su `env`; `auth="inherit"` mantiene el comportamiento actual.

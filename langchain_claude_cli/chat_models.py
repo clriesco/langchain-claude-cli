@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import queue
 import threading
 from collections.abc import AsyncIterator, Callable, Iterator, Mapping, Sequence
@@ -43,19 +44,25 @@ from langchain_claude_cli._convert import (
     canonical_args,
     convert_lc_messages,
     flatten_to_single_user,
+    rate_limit_to_meta,
     result_to_response_metadata,
     sdk_blocks_to_lc,
     strip_tool_namespace,
     usage_to_usage_metadata,
 )
 from langchain_claude_cli._sessions import Resolution, SessionCache
+from langchain_claude_cli.exceptions import (
+    ClaudeCliBudgetExceededError,
+    ClaudeCliError,
+    ClaudeCliTimeoutError,
+    classify_status,
+)
 from langchain_claude_cli.tools import ClaudeTool, normalize_tools
 
 _RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504, 529}
 
-
-class ClaudeCliBudgetExceededError(RuntimeError):
-    """The run stopped because it reached the configured max_budget_usd."""
+# Auth vars the CLI prefers over the OAuth login when inherited (spike S9)
+_AUTH_ENV_VARS = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
 
 # ChatAnthropic server tools -> CLI built-in tools (design/spec agentic-mode)
 _SERVER_TOOL_MAP = {
@@ -212,6 +219,11 @@ class ChatClaudeCli(BaseChatModel):
     disallowed_tools: list[str | ClaudeTool] | None = None
     session_id: str | None = None
     """Explicit CLI session to resume (also settable per-call via config)."""
+    auth: Literal["oauth", "inherit"] = "oauth"
+    """"oauth" (default) guarantees the CLI subprocess uses your subscription
+    login: inherited ANTHROPIC_API_KEY/ANTHROPIC_AUTH_TOKEN are neutralized
+    (the CLI would otherwise prefer them and bill per token — spike S9).
+    "inherit" keeps the process environment as-is."""
     max_budget_usd: float | None = None
     sandbox: dict[str, Any] | None = None
     fallback_model: str | None = None
@@ -545,6 +557,11 @@ class ChatClaudeCli(BaseChatModel):
             options.cli_path = self.cli_path
         if self.env:
             options.env = dict(self.env)
+        if self.auth == "oauth":
+            # options.env only overrides (never unsets) inherited vars, and an
+            # empty string makes the CLI fall back to the OAuth login (S9).
+            for var in _AUTH_ENV_VARS:
+                options.env.setdefault(var, "")
         if self.thinking:
             options.thinking = cast(Any, self.thinking)
         if self.effort:
@@ -560,6 +577,43 @@ class ChatClaudeCli(BaseChatModel):
         if output_format:
             options.output_format = output_format
         return options
+
+    # ── Files API materialization (spike S7) ─────────────────
+
+    def _file_resolver(self, file_id: str) -> dict[str, Any] | None:
+        """Download a Files API file via the Anthropic API and inline it.
+
+        The API key is used ONLY here — it is never passed to the CLI
+        subprocess (see `auth`). Returns None when unresolvable.
+        """
+        key = (
+            self.anthropic_api_key
+            if isinstance(self.anthropic_api_key, str) and self.anthropic_api_key
+            else os.environ.get("ANTHROPIC_API_KEY")
+        )
+        if not key or not file_id:
+            return None
+        try:
+            import base64
+
+            import anthropic
+
+            client = anthropic.Anthropic(api_key=key)
+            meta = client.beta.files.retrieve_metadata(file_id)
+            blob = client.beta.files.download(file_id)
+            data = blob.read() if hasattr(blob, "read") else bytes(blob)
+            media = getattr(meta, "mime_type", None) or "application/octet-stream"
+            block_type = "image" if media.startswith("image/") else "document"
+            return {
+                "type": block_type,
+                "source": {
+                    "type": "base64",
+                    "media_type": media,
+                    "data": base64.b64encode(data).decode(),
+                },
+            }
+        except Exception:
+            return None
 
     # ── Session / prompt resolution ──────────────────────────
 
@@ -609,10 +663,15 @@ class ChatClaudeCli(BaseChatModel):
         messages: list[BaseMessage],
         stop: list[str] | None,
         **kwargs: Any,
-    ) -> tuple[list[Any], Any, ConvertedHistory, Resolution]:
+    ) -> tuple[list[Any], Any, ConvertedHistory, Resolution, dict[str, Any] | None]:
         """Run one CLI query with retries/timeout; return (assistant_msgs, result, ...)."""
         try:
-            from claude_agent_sdk import AssistantMessage, ResultMessage, query
+            from claude_agent_sdk import (
+                AssistantMessage,
+                RateLimitEvent,
+                ResultMessage,
+                query,
+            )
         except ImportError as e:
             raise ImportError(
                 "claude-agent-sdk is required. Install with: pip install claude-agent-sdk"
@@ -620,7 +679,7 @@ class ChatClaudeCli(BaseChatModel):
 
         tool_schemas = kwargs.get("tools") or []
         resolution = self._resolve_session(messages, kwargs.get("config"))
-        converted = convert_lc_messages(resolution.suffix)
+        converted = convert_lc_messages(resolution.suffix, self._file_resolver)
         # Delivery = ONLY the suffix's pending ToolMessages (older results were
         # already consumed in-session; new same-args calls must defer, not get
         # stale results). Names/args come from AIMessages in the full history.
@@ -669,7 +728,7 @@ class ChatClaudeCli(BaseChatModel):
         attempts = max(1, self.max_retries + 1)
         last_error: Exception | None = None
         for attempt in range(attempts):
-            collected: dict[str, Any] = {"result": None, "msgs": []}
+            collected: dict[str, Any] = {"result": None, "msgs": [], "rate_limit": None}
 
             async def _collect2() -> None:
                 async for msg in query(prompt=_stream_entries(), options=options):
@@ -677,6 +736,8 @@ class ChatClaudeCli(BaseChatModel):
                         collected["msgs"].append(msg)
                     elif isinstance(msg, ResultMessage):
                         collected["result"] = msg
+                    elif isinstance(msg, RateLimitEvent):
+                        collected["rate_limit"] = rate_limit_to_meta(msg)
 
             try:
                 if self.default_request_timeout:
@@ -685,8 +746,10 @@ class ChatClaudeCli(BaseChatModel):
                     )
                 else:
                     await _collect2()
-            except TimeoutError:
-                raise
+            except TimeoutError as e:
+                raise ClaudeCliTimeoutError(
+                    f"run exceeded timeout={self.default_request_timeout}s"
+                ) from e
             except Exception as e:
                 text = str(e)
                 if "maximum budget" in text.lower():
@@ -704,8 +767,13 @@ class ChatClaudeCli(BaseChatModel):
 
             result: Any = collected["result"]
             status = getattr(result, "api_error_status", None) if result else None
+            detail = str(
+                (getattr(result, "result", None) or getattr(result, "errors", None))
+                if result
+                else ""
+            )
             if result is not None and result.is_error and status in _RETRYABLE_STATUS:
-                last_error = RuntimeError(f"CLI API error (status {status})")
+                last_error = classify_status(status, detail or f"status {status}")
                 if attempt + 1 < attempts:
                     await asyncio.sleep(min(2**attempt, 8))
                     continue
@@ -714,13 +782,16 @@ class ChatClaudeCli(BaseChatModel):
                 and result.is_error
                 and status not in _RETRYABLE_STATUS
             ):
-                detail = getattr(result, "result", None) or getattr(
-                    result, "errors", None
-                )
-                raise RuntimeError(f"Claude CLI run failed: {detail or result.subtype}")
-            return collected["msgs"], result, delivery, resolution
+                raise classify_status(status, detail or str(result.subtype))
+            return (
+                collected["msgs"],
+                result,
+                delivery,
+                resolution,
+                collected["rate_limit"],
+            )
 
-        raise last_error or RuntimeError("Claude CLI run failed")
+        raise last_error or ClaudeCliError("Claude CLI run failed")
 
     def _build_chat_result(
         self,
@@ -729,6 +800,7 @@ class ChatClaudeCli(BaseChatModel):
         messages: list[BaseMessage],
         stop: list[str] | None,
         delivery: ConvertedHistory | None = None,
+        rate_limit: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> ChatResult:
         deferred = bool(
@@ -753,6 +825,8 @@ class ChatClaudeCli(BaseChatModel):
         )
         if synthetic_reason:
             response_metadata["stop_reason"] = synthetic_reason
+        if rate_limit:
+            response_metadata["rate_limit"] = rate_limit
 
         additional_kwargs: dict[str, Any] = {}
         structured = getattr(result, "structured_output", None) if result else None
@@ -790,20 +864,20 @@ class ChatClaudeCli(BaseChatModel):
         forced = tool_choice not in (None, "auto") and not (
             isinstance(tool_choice, dict) and tool_choice.get("type") == "auto"
         )
-        assistant_msgs, result, delivery, _ = await self._arun_query(
+        assistant_msgs, result, delivery, _, rate_limit = await self._arun_query(
             messages, stop, **kwargs
         )
         chat_result = self._build_chat_result(
-            assistant_msgs, result, messages, stop, delivery, **kwargs
+            assistant_msgs, result, messages, stop, delivery, rate_limit, **kwargs
         )
         msg = cast(AIMessage, chat_result.generations[0].message)
         if forced and not msg.tool_calls:
             # One retry with the instruction already embedded (design D3)
-            assistant_msgs, result, delivery, _ = await self._arun_query(
+            assistant_msgs, result, delivery, _, rate_limit = await self._arun_query(
                 messages, stop, **kwargs
             )
             chat_result = self._build_chat_result(
-                assistant_msgs, result, messages, stop, delivery, **kwargs
+                assistant_msgs, result, messages, stop, delivery, rate_limit, **kwargs
             )
             msg = cast(AIMessage, chat_result.generations[0].message)
             if not msg.tool_calls:
@@ -834,6 +908,7 @@ class ChatClaudeCli(BaseChatModel):
         try:
             from claude_agent_sdk import (
                 AssistantMessage,
+                RateLimitEvent,
                 ResultMessage,
                 StreamEvent,
                 query,
@@ -845,7 +920,7 @@ class ChatClaudeCli(BaseChatModel):
 
         tool_schemas = kwargs.get("tools") or []
         resolution = self._resolve_session(messages, kwargs.get("config"))
-        converted = convert_lc_messages(resolution.suffix)
+        converted = convert_lc_messages(resolution.suffix, self._file_resolver)
         pending_ids = {
             m.tool_call_id for m in resolution.suffix if isinstance(m, ToolMessage)
         }
@@ -883,6 +958,7 @@ class ChatClaudeCli(BaseChatModel):
         server_tool_seq = 1000
         assistant_msgs: list[Any] = []
         final_result: Any = None
+        stream_rate_limit: dict[str, Any] | None = None
 
         def _scan(text: str) -> tuple[str, bool]:
             """Return (emittable_text, hit_stop)."""
@@ -1030,6 +1106,8 @@ class ChatClaudeCli(BaseChatModel):
                     assistant_msgs.append(msg)
                 elif isinstance(msg, ResultMessage):
                     final_result = msg
+                elif isinstance(msg, RateLimitEvent):
+                    stream_rate_limit = rate_limit_to_meta(msg)
         finally:
             await cast(Any, stream).aclose()
 
@@ -1044,6 +1122,8 @@ class ChatClaudeCli(BaseChatModel):
             meta = result_to_response_metadata(final_result, self.model)
             if stopped:
                 meta["stop_reason"] = "stop_sequence"
+            if stream_rate_limit:
+                meta["rate_limit"] = stream_rate_limit
             usage = (
                 usage_to_usage_metadata(getattr(final_result, "usage", None))
                 if self.stream_usage
