@@ -69,4 +69,4 @@
 - [x] 10.1 Suite estándar `langchain-tests` (ChatModelUnitTests/ChatModelIntegrationTests) con xfails documentados de los niveles B/C
 - [x] 10.2 README completo: quick start, matriz de paridad A/B/C con ChatAnthropic, tabla de migración desde `langchain-claude-code`, sección de seguridad y de ToS (heredadas y actualizadas)
 - [x] 10.3 CI (GitHub Actions): lint + mypy + unit tests; job de integración manual/nightly contra CLI real
-- [ ] 10.4 Verificar disponibilidad del nombre `langchain-claude-cli` en PyPI, empaquetar y publicar 0.1.0; eliminar el clon de referencia `langchain-claude-code/` del repo
+- [x] 10.4 Verificar disponibilidad del nombre `langchain-claude-cli` en PyPI, empaquetar y publicar 0.1.0; eliminar el clon de referencia `langchain-claude-code/` del repo
