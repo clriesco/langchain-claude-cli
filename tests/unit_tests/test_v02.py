@@ -126,7 +126,11 @@ def test_file_block_materialized_via_resolver():
         assert file_id == "file-abc"
         return {
             "type": "document",
-            "source": {"type": "base64", "media_type": "application/pdf", "data": "QQ=="},
+            "source": {
+                "type": "base64",
+                "media_type": "application/pdf",
+                "data": "QQ==",
+            },
         }
 
     out = convert_lc_messages(

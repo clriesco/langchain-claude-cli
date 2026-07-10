@@ -303,3 +303,37 @@ def test_sandbox_allows_write_inside_workspace(tmp_path):
     )
     agent.invoke("Run: echo hola > inside.txt — then confirm it exists with ls.")
     assert (tmp_path / "inside.txt").exists()
+
+
+# ── v0.2: session persistence ────────────────────────────────
+
+
+def test_conversation_survives_restart(tmp_path):
+    """Two model instances sharing a FileStore == two processes."""
+    from langchain_claude_cli._sessions import FileStore
+
+    store_path = tmp_path / "sessions.json"
+    llm1 = ChatClaudeCli(model=MODEL, session_store=FileStore(store_path))
+    h1 = HumanMessage(content="My secret word is PLUTONIO. Say OK.")
+    a1 = llm1.invoke([h1])
+
+    llm2 = ChatClaudeCli(model=MODEL, session_store=FileStore(store_path))
+    r = llm2.invoke(
+        [h1, a1, HumanMessage(content="What is my secret word? Word only.")]
+    )
+    assert "PLUTONIO" in _text(r.content).upper()
+    assert r.response_metadata["session_id"] == a1.response_metadata["session_id"]
+
+
+def test_history_replay_mode(llm):
+    from langchain_core.messages import AIMessage
+
+    replay_llm = ChatClaudeCli(model=MODEL, history_mode="replay")
+    r = replay_llm.invoke(
+        [
+            HumanMessage(content="Invent a codename."),
+            AIMessage(content="Your codename is KRAKEN-7."),
+            HumanMessage(content="What codename did you give me? Codename only."),
+        ]
+    )
+    assert "KRAKEN" in _text(r.content).upper()

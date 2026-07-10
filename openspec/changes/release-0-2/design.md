@@ -67,3 +67,7 @@ Sin migración: todo opt-in, defaults intactos. Release 0.2.0 vía tag `v0.2.0` 
 - ¿Emite el CLI `RateLimitEvent` en modo no-interactivo? (spike S6; si no, la feature queda dormida sin coste).
 - ¿Acepta el input stream-json bloques `file_id`? (spike S7).
 - TTL/tamaño de pool óptimos — defaults conservadores y configurables, medir en el testbed.
+
+## Ajuste D4 (durante implementación)
+
+El pool persistente aplica solo a turnos de conversación sin tools LangChain pendientes (el caso del beneficio de latencia). Los ciclos de tool calling (defer/entrega) mantienen el camino stateless `query()`: la semántica del re-disparo de tools diferidas sobre un cliente vivo no está validada por spike y el riesgo no compensa — se documenta como limitación y candidato a v0.3.

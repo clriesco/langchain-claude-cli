@@ -9,11 +9,11 @@
 
 ## 2. Sesiones persistentes
 
-- [ ] 2.1 Protocolo `SessionStore` mínimo (get/set/items) + `InMemoryStore` (refactor sin cambio de comportamiento) + `FileStore` (JSON, file-lock, escritura atómica, poda LRU)
-- [ ] 2.2 Parámetro `session_store="memory"|"file"|instancia` en `ChatClaudeCli`; default `"memory"`
-- [ ] 2.3 Keying por `thread_id` (`config.configurable.thread_id`) como recuperación cuando el prefijo no matchea
-- [ ] 2.4 `history_mode="replay"`: replay fiel del historial en sesión nueva + warning de coste
-- [ ] 2.5 Tests unitarios (FileStore concurrente, thread_id fallback, replay) + test de integración de supervivencia a reinicio (dos procesos)
+- [x] 2.1 Protocolo `SessionStore` mínimo (get/set/items) + `InMemoryStore` (refactor sin cambio de comportamiento) + `FileStore` (JSON, file-lock, escritura atómica, poda LRU)
+- [x] 2.2 Parámetro `session_store="memory"|"file"|instancia` en `ChatClaudeCli`; default `"memory"`
+- [x] 2.3 Keying por `thread_id` (`config.configurable.thread_id`) como recuperación cuando el prefijo no matchea
+- [x] 2.4 `history_mode="replay"`: replay fiel del historial en sesión nueva + warning de coste
+- [x] 2.5 Tests unitarios (FileStore concurrente, thread_id fallback, replay) + test de integración de supervivencia a reinicio (dos procesos)
 
 ## 3. Cliente persistente
 

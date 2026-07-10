@@ -50,7 +50,7 @@ from langchain_claude_cli._convert import (
     strip_tool_namespace,
     usage_to_usage_metadata,
 )
-from langchain_claude_cli._sessions import Resolution, SessionCache
+from langchain_claude_cli._sessions import Resolution, SessionCache, make_store
 from langchain_claude_cli.exceptions import (
     ClaudeCliBudgetExceededError,
     ClaudeCliError,
@@ -227,9 +227,17 @@ class ChatClaudeCli(BaseChatModel):
     max_budget_usd: float | None = None
     sandbox: dict[str, Any] | None = None
     fallback_model: str | None = None
-    history_mode: Literal["auto", "flatten"] = "auto"
+    history_mode: Literal["auto", "flatten", "replay"] = "auto"
+    """"auto": resume by prefix, flatten unknown histories. "flatten": always
+    flatten. "replay": replay unknown histories faithfully as multi-message
+    input — full role fidelity at the cost of one live generation per
+    historical user message (spike S3)."""
+    session_store: Any = "memory"
+    """Prefix-cache backend: "memory" (default), "file" (persistent JSON in
+    ~/.langchain-claude-cli/, conversations survive restarts) or a
+    SessionStoreBackend instance."""
 
-    _session_cache: SessionCache = PrivateAttr(default_factory=SessionCache)
+    _session_cache: SessionCache = PrivateAttr(default=None)  # type: ignore[assignment]
 
     # ── Compat warnings ──────────────────────────────────────
 
@@ -246,7 +254,7 @@ class ChatClaudeCli(BaseChatModel):
     )
 
     @model_validator(mode="after")
-    def _warn_noop_params(self) -> ChatClaudeCli:
+    def _finish_init(self) -> ChatClaudeCli:
         for name in self._NOOP_PARAMS:
             if getattr(self, name) not in (None, {}, []):
                 warn_once(
@@ -254,6 +262,7 @@ class ChatClaudeCli(BaseChatModel):
                     f"ChatClaudeCli accepts `{name}` for ChatAnthropic compatibility "
                     "but the Claude CLI does not support it; the parameter is ignored.",
                 )
+        self._session_cache = SessionCache(store=make_store(self.session_store))
         return self
 
     # ── LangChain plumbing ───────────────────────────────────
@@ -621,15 +630,24 @@ class ChatClaudeCli(BaseChatModel):
         self, messages: list[BaseMessage], config: RunnableConfig | None
     ) -> Resolution:
         explicit = None
+        thread_id = None
         if config:
-            explicit = (config.get("configurable") or {}).get("session_id")
+            configurable = config.get("configurable") or {}
+            explicit = configurable.get("session_id")
+            thread_id = configurable.get("thread_id")
         explicit = explicit or self.session_id
         if explicit:
             # Caller manages history: send only the last message as suffix.
             return Resolution(
                 strategy="resume", session_id=explicit, suffix=messages[-1:]
             )
-        return self._session_cache.resolve(messages)
+        return self._session_cache.resolve(messages, thread_id=thread_id)
+
+    @staticmethod
+    def _thread_id(config: RunnableConfig | None) -> str | None:
+        if not config:
+            return None
+        return (config.get("configurable") or {}).get("thread_id")
 
     def _build_prompt_entries(
         self, resolution: Resolution, converted: ConvertedHistory
@@ -643,6 +661,14 @@ class ChatClaudeCli(BaseChatModel):
             return entries
         user_count = sum(1 for e in entries if e["type"] == "user")
         has_assistant = any(e["type"] == "assistant" for e in entries)
+        if self.history_mode == "replay" and (has_assistant or user_count > 1):
+            warn_once(
+                "history_replay",
+                "history_mode='replay': the full history is replayed with role "
+                "fidelity; each historical user message triggers a live "
+                "generation (cost grows with history length).",
+            )
+            return entries
         if self.history_mode == "flatten" or has_assistant or user_count > 1:
             if entries:
                 warn_once(
@@ -845,7 +871,11 @@ class ChatClaudeCli(BaseChatModel):
 
         session_id = getattr(result, "session_id", None) if result else None
         if session_id:
-            self._session_cache.register([*messages, ai_msg], session_id)
+            self._session_cache.register(
+                [*messages, ai_msg],
+                session_id,
+                thread_id=self._thread_id(kwargs.get("config")),
+            )
 
         return ChatResult(
             generations=[
@@ -1149,6 +1179,7 @@ class ChatClaudeCli(BaseChatModel):
                         AIMessage(content=cast(Any, content), tool_calls=tool_calls),
                     ],
                     session_id,
+                    thread_id=self._thread_id(kwargs.get("config")),
                 )
 
     def _stream(
