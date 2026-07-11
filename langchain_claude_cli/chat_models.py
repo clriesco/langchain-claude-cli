@@ -853,7 +853,10 @@ class ChatClaudeCli(BaseChatModel):
                                 msg = await iterator.__anext__()
                         except StopAsyncIteration:
                             break
-                        except (TimeoutError, asyncio.TimeoutError):  # 3.10: distinct classes
+                        except (
+                            TimeoutError,
+                            asyncio.TimeoutError,
+                        ):  # 3.10: distinct classes
                             logger.warning(
                                 "watchdog: no SDK activity for %.0fs, aborting run",
                                 inactivity,
