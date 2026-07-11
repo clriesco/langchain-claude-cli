@@ -2,11 +2,11 @@
 
 ## 1. Cassettes (tests deterministas)
 
-- [ ] 1.1 Serializador de mensajes SDK: dataclass ↔ dict con discriminador `__type__` (AssistantMessage+blocks, ResultMessage, StreamEvent, RateLimitEvent) + tests unitarios de round-trip
-- [ ] 1.2 Harness `tests/_cassettes.py`: fixture `cassette` (replay con matching laxo model/entries/tools) + modo `RECORD_CASSETTES=1` (delega en query real y vuelca)
-- [ ] 1.3 Grabar cassettes de los flujos núcleo: invoke, multiturn resume, ciclo tool calling (2 llamadas), paralelas, structured output, streaming, stop-seq, PDF
-- [ ] 1.4 Migrar la suite E2E a cassettes por defecto (`-m live` conserva la ejecución real); CI ejecuta la suite con cassettes en cada push
-- [ ] 1.5 Verificar suite cassette completa en verde sin CLI (simular con PATH sin `claude`)
+- [x] 1.1 Serializador de mensajes SDK: dataclass ↔ dict con discriminador `__type__` (AssistantMessage+blocks, ResultMessage, StreamEvent, RateLimitEvent) + tests unitarios de round-trip
+- [x] 1.2 Harness `tests/_cassettes.py`: fixture `cassette` (replay con matching laxo model/entries/tools) + modo `RECORD_CASSETTES=1` (delega en query real y vuelca)
+- [x] 1.3 Grabar cassettes de los flujos núcleo: invoke, multiturn resume, ciclo tool calling (2 llamadas), paralelas, structured output, streaming, stop-seq, PDF
+- [x] 1.4 Migrar la suite E2E a cassettes por defecto (`-m live` conserva la ejecución real); CI ejecuta la suite con cassettes en cada push
+- [x] 1.5 Verificar suite cassette completa en verde sin CLI (simular con PATH sin `claude`)
 
 ## 2. Watchdog + logging
 

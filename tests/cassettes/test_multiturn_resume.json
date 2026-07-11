@@ -1,0 +1,314 @@
+[
+ {
+  "request": {
+   "model": "claude-haiku-4-5",
+   "n_entries": 1,
+   "prompt_was_str": false,
+   "has_lc_tools": false,
+   "resume": false
+  },
+  "messages": [
+   {
+    "__type__": "RateLimitEvent",
+    "rate_limit_info": {
+     "__type__": "RateLimitInfo",
+     "status": "allowed",
+     "resets_at": 1783781400,
+     "rate_limit_type": "five_hour",
+     "utilization": null,
+     "overage_status": "rejected",
+     "overage_resets_at": null,
+     "overage_disabled_reason": "org_level_disabled",
+     "raw": {
+      "status": "allowed",
+      "resetsAt": 1783781400,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
+     }
+    },
+    "uuid": "eb5262bb-d96e-46fc-ba5b-145ad3916d4f",
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ThinkingBlock",
+      "thinking": "The user is asking me to say \"OK\" and providing information that their favorite number is 77. This is a simple request that doesn't require any function calls or complex operations. I should just acknowledge this and say \"OK\" as requested.",
+      "signature": "EuYDCpMBCA8YAipAxMMbqUwWqhPvR9DNIBNmbLwNmS+53fT1tUNbdodVIuU5W4NGbPDzQQLF45DdUd2beCLxhh+i7bjvZxOUUE2kdjIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgxguPdgbDIhEttRWWwaDF/nRfokUiHgIgv2gCIw6O0qXelGMzXAgR2oCfzmT4jFhlsHEI09CyqyQb4/KbmPafYAM3QjFKabuGFebgJzKv8BNK59J15yCE8Jde036EK4V+X5RFZ448r3q5oXEEk6WsR08O6L1xH1Nrc9i2Yk0TogN3NEo1wjf8iXqSuiLSvgq4xPBkmLCnerlD/cKWUKhKyyKhBHiLapLtSp7pAMCnQOKRDKZnARyStveyPtdzCSmWx3eLg7C1P+t2NOe9lT8ZXRHY30oMcy7c88e6Pms4+rcdaBcB1yW2jm5mX8Ezju7zhFrznE/m5+MP+uJeU5p6iDy/YQl7rZp+nLPmLLAkWJDkje2gr0G6LKW0qUk9FVeeQD00WWqDdVL3AcHyZQjEvNwQ+qSfAcWRmUkBNTvKdmqwMFVBES7WVInpOvjqeuGAE="
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 13225,
+     "cache_read_input_tokens": 0,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 13225
+     },
+     "output_tokens": 3,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4mXXmvm1gzugSKaqZ3",
+    "stop_reason": null,
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31",
+    "uuid": "9cd5b158-13b2-4f53-836f-32817de4e3e0"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "TextBlock",
+      "text": "OK"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 13225,
+     "cache_read_input_tokens": 0,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 13225
+     },
+     "output_tokens": 3,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4mXXmvm1gzugSKaqZ3",
+    "stop_reason": null,
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31",
+    "uuid": "d67aa1be-bec7-4473-b6b8-95cfa8c75881"
+   },
+   {
+    "__type__": "ResultMessage",
+    "subtype": "success",
+    "duration_ms": 1552,
+    "duration_api_ms": 2877,
+    "is_error": false,
+    "num_turns": 1,
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31",
+    "stop_reason": "end_turn",
+    "total_cost_usd": 0.027356000000000002,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 13225,
+     "cache_read_input_tokens": 0,
+     "output_tokens": 62,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 13225,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 10,
+       "output_tokens": 62,
+       "cache_read_input_tokens": 0,
+       "cache_creation_input_tokens": 13225,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 13225
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "result": "OK",
+    "structured_output": null,
+    "model_usage": {
+     "claude-haiku-4-5-20251001": {
+      "inputTokens": 526,
+      "outputTokens": 12,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.000586,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     },
+     "claude-haiku-4-5": {
+      "inputTokens": 10,
+      "outputTokens": 62,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 13225,
+      "webSearchRequests": 0,
+      "costUSD": 0.026770000000000002,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": null,
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "558e2551-bbc8-46f5-951b-b67b40c12f90"
+   }
+  ]
+ },
+ {
+  "request": {
+   "model": "claude-haiku-4-5",
+   "n_entries": 1,
+   "prompt_was_str": false,
+   "has_lc_tools": false,
+   "resume": true
+  },
+  "messages": [
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ThinkingBlock",
+      "thinking": "The user is asking me to recall their favorite number and respond with just the digits. They told me in the previous message that their favorite number is 77.",
+      "signature": "EpUDCpMBCA8YAipAk0anWeCdxJM2nPuQACb2UcLjEL1tngQqbuR2S7Bbyg+TMrwiBa8mdZKPHPT++uJ7MVwmRo7lYSUAIfgSn4tNFjIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgwkmpMryjEEUYWaW4UaDK/0QnhV+WB/YegjviIwH4H/Jxt8oC7hsVWrMrZF498EcpB3cKKsTzAjkMtGBwzUjul9oxZu9z0dB/0evrk7Kq4BT28vteTN7pnWJlP8wGSkJPYfbVRW7hjU+ZzGSDkkBuqn52x7vOFd1TqZ72i+AbtwPHSTocC2NqClJU7gOx0jmg8TFzlqvmjf2De8FbtCltcTNXj3vyZf5dwC6fwCVkjvgBP8F0Z5QJbfCmicxbCnc0yeBqZgy3+V9WtD63UhwFrOPxVeiA9patwP4r87If3Z+C2Mm8H2r1jHSxgs4Z5CldK5qpNctta11fyR2w2bGAE="
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 15,
+     "cache_read_input_tokens": 13225,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 15
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4mmHm6UkKUCYbuqwvB",
+    "stop_reason": null,
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31",
+    "uuid": "2655549e-b8d5-4009-9f6f-d1a387f0d13b"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "TextBlock",
+      "text": "77"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 15,
+     "cache_read_input_tokens": 13225,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 15
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4mmHm6UkKUCYbuqwvB",
+    "stop_reason": null,
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31",
+    "uuid": "e5bea4ab-6151-4712-93e6-0137a3724295"
+   },
+   {
+    "__type__": "RateLimitEvent",
+    "rate_limit_info": {
+     "__type__": "RateLimitInfo",
+     "status": "allowed",
+     "resets_at": 1783781400,
+     "rate_limit_type": "five_hour",
+     "utilization": null,
+     "overage_status": "rejected",
+     "overage_resets_at": null,
+     "overage_disabled_reason": "org_level_disabled",
+     "raw": {
+      "status": "allowed",
+      "resetsAt": 1783781400,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
+     }
+    },
+    "uuid": "02e8ba33-c63b-47d4-8697-d0ef61ab9b49",
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31"
+   },
+   {
+    "__type__": "ResultMessage",
+    "subtype": "success",
+    "duration_ms": 1978,
+    "duration_api_ms": 1517,
+    "is_error": false,
+    "num_turns": 1,
+    "session_id": "2ef3dcfe-df14-4c52-8def-fa897c55ef31",
+    "stop_reason": "end_turn",
+    "total_cost_usd": 0.0015825000000000001,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 15,
+     "cache_read_input_tokens": 13225,
+     "output_tokens": 44,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 15,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 10,
+       "output_tokens": 44,
+       "cache_read_input_tokens": 13225,
+       "cache_creation_input_tokens": 15,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 15
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "result": "77",
+    "structured_output": null,
+    "model_usage": {
+     "claude-haiku-4-5": {
+      "inputTokens": 10,
+      "outputTokens": 44,
+      "cacheReadInputTokens": 13225,
+      "cacheCreationInputTokens": 15,
+      "webSearchRequests": 0,
+      "costUSD": 0.0015825000000000001,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": null,
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "df8566ba-8d55-4a19-969a-c7f9188e7810"
+   }
+  ]
+ }
+]

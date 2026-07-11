@@ -1,0 +1,163 @@
+[
+ {
+  "request": {
+   "model": "claude-haiku-4-5",
+   "n_entries": 1,
+   "prompt_was_str": false,
+   "has_lc_tools": false,
+   "resume": false
+  },
+  "messages": [
+   {
+    "__type__": "RateLimitEvent",
+    "rate_limit_info": {
+     "__type__": "RateLimitInfo",
+     "status": "allowed",
+     "resets_at": 1783781400,
+     "rate_limit_type": "five_hour",
+     "utilization": null,
+     "overage_status": "rejected",
+     "overage_resets_at": null,
+     "overage_disabled_reason": "org_level_disabled",
+     "raw": {
+      "status": "allowed",
+      "resetsAt": 1783781400,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
+     }
+    },
+    "uuid": "27dbb9c9-b079-4bee-8fa2-101f52c39481",
+    "session_id": "41d4c267-19e5-4cac-8320-641ac2f6e3fa"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ThinkingBlock",
+      "thinking": "The user is asking me to extract the secret word from the PDF document that was provided. Looking at the document, it clearly states:\n\n\"Secret word: XYLOPHONE-99\"\n\nThe user wants just the word, so I should respond with: XYLOPHONE-99",
+      "signature": "Et8DCpMBCA8YAipAmy3k/ge50Wpuydok1WuUU623UCgGCPvrTdB3ZQVGmysu8ZOlxmYRk7+GVJNXMkMPAL04x4AHDXKvp6NnE8J9MjIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgyAg1S/L8lMOj6wUy4aDNz5lAR06GZOsV/AeiIwdQnSzT5fEggzKvfilMTy+lZEYlfdJi+fA5LWhEmDkUeTEFgpJvgaLFOXiKDaguFeKvgB9H657iEpd2ssc04XWiAvn4zngem+NxYYQ5goEKXhYTyOapXXozxLPRmxJWbrR1OWrW7DVSBxFx2fquoLeDg8QAP6uLDvD6k+ZFpRbXsoJ15XP/Vonzl6xcewGEG1vnI6d/APdCyi79VM8oVaMgBNevxj3PFD3t2m1aS4iBhf9wwMbDaTGV3H56B1OHXv1RgcQjMce8HJiFOBwYi4ItBVkeaMHwhU36mrgX94HSlgYATdEVIGguii8lIWX5N7XrFPnCH7zZndnTaIXJtuN8lt9j/rEU/3Xew9GNeSXFE6FkQ0XIx1F0AgWoBkM48jvCHyJ8M6oa99QaIYAQ=="
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 2371,
+     "cache_read_input_tokens": 12436,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 2371
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4p8S3oJyW3V4VBq6bm",
+    "stop_reason": null,
+    "session_id": "41d4c267-19e5-4cac-8320-641ac2f6e3fa",
+    "uuid": "31739297-c373-4309-9bb5-667bb27a8bfb"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "TextBlock",
+      "text": "XYLOPHONE-99"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 2371,
+     "cache_read_input_tokens": 12436,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 2371
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4p8S3oJyW3V4VBq6bm",
+    "stop_reason": null,
+    "session_id": "41d4c267-19e5-4cac-8320-641ac2f6e3fa",
+    "uuid": "5fd67232-7b33-4830-a975-070a5620d9a9"
+   },
+   {
+    "__type__": "ResultMessage",
+    "subtype": "success",
+    "duration_ms": 2465,
+    "duration_api_ms": 3892,
+    "is_error": false,
+    "num_turns": 1,
+    "session_id": "41d4c267-19e5-4cac-8320-641ac2f6e3fa",
+    "stop_reason": "end_turn",
+    "total_cost_usd": 0.006965600000000001,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 2371,
+     "cache_read_input_tokens": 12436,
+     "output_tokens": 76,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 2371,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 10,
+       "output_tokens": 76,
+       "cache_read_input_tokens": 12436,
+       "cache_creation_input_tokens": 2371,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 2371
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "result": "XYLOPHONE-99",
+    "structured_output": null,
+    "model_usage": {
+     "claude-haiku-4-5-20251001": {
+      "inputTokens": 525,
+      "outputTokens": 13,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.0005899999999999999,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     },
+     "claude-haiku-4-5": {
+      "inputTokens": 10,
+      "outputTokens": 76,
+      "cacheReadInputTokens": 12436,
+      "cacheCreationInputTokens": 2371,
+      "webSearchRequests": 0,
+      "costUSD": 0.0063756,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": null,
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "a4393126-e8e3-45b7-a5f3-3c671cbaf092"
+   }
+  ]
+ }
+]

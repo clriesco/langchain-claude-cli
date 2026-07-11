@@ -1,0 +1,234 @@
+[
+ {
+  "request": {
+   "model": "claude-haiku-4-5",
+   "n_entries": 1,
+   "prompt_was_str": false,
+   "has_lc_tools": true,
+   "resume": false
+  },
+  "messages": [
+   {
+    "__type__": "RateLimitEvent",
+    "rate_limit_info": {
+     "__type__": "RateLimitInfo",
+     "status": "allowed",
+     "resets_at": 1783781400,
+     "rate_limit_type": "five_hour",
+     "utilization": null,
+     "overage_status": "rejected",
+     "overage_resets_at": null,
+     "overage_disabled_reason": "org_level_disabled",
+     "raw": {
+      "status": "allowed",
+      "resetsAt": 1783781400,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
+     }
+    },
+    "uuid": "4f61b768-7416-4e4b-8a1b-f48fb5270592",
+    "session_id": "ad33fd8f-54cb-45e3-b5fe-adfa15ec5758"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ThinkingBlock",
+      "thinking": "The user wants me to get the weather for Tokyo and Paris in parallel (at the same time). I have access to the `mcp__lc__get_weather` function that can get the current weather for a city.\n\nSince these are independent calls with no dependencies between them, I should make both calls in the same function_calls block.",
+      "signature": "ErIECpMBCA8YAipAlxGBVW4GZkJtyuHWzG4dKQyErIVSIJmnO33OzaSCCBaZq3LLiXWSPFimmvunXEPQ7a396Od381oxsHTxkChDFjIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgwmfXHlWhl8zHHDGM8aDPpF/lOOQlDpUnKK1yIw6u+32jy4CsCxmyHKlP0MwqIMEm/oyOxzWU9OqUa+uM/JkIQY7q+YGIhjodLd8upMKssC1bYQJMF9GEsW1wnudJWWR/4p9KADqKcBpSyhDNavHaSBubpZ7s91/0RZBj1+2avXsYiGNoWjeTQLYIUepuJzsBSh13qVFIoTpw+M7+ZTWPJGZitt0hKepZ/WNo2H9fjxvTzlAWPXMb5c9usJcWrLIeS1oJW/1CRHAjZzTPkT7L9uRQjvRCG9QV209z6QrQLpyGN+FILPKklbWELsChxNp2EOotXT9NXp0jb16gHUY/YFd/04av+btwd3EbwS957JP0rV+ja/3Zrks1zcaF8Low7G1Q8uTV9KSnyBPdha0Q1OqOHxMb8f6cK+KWkg3lH2evd9oiXwvrKH8bAuxmCr0Pn1D3+9p5xJp0wlYAFgVgXmWBI4M37QLe68jMhf7cHFxvVsXnYo0WTsKBfr84B32HOJ8D113G/p/CQGpRvkH15zsRK9LH29eX2A2BgB"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 797,
+     "cache_read_input_tokens": 12497,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 797
+     },
+     "output_tokens": 3,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4njNCJSSkTAWNA5CrJ",
+    "stop_reason": null,
+    "session_id": "ad33fd8f-54cb-45e3-b5fe-adfa15ec5758",
+    "uuid": "4a339396-dfae-40ac-a05f-8bbe05e5362c"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ToolUseBlock",
+      "id": "toolu_013DEB4u7xKnMnz3KN8JHoDq",
+      "name": "mcp__lc__get_weather",
+      "input": {
+       "city": "Tokyo"
+      }
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 797,
+     "cache_read_input_tokens": 12497,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 797
+     },
+     "output_tokens": 3,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4njNCJSSkTAWNA5CrJ",
+    "stop_reason": null,
+    "session_id": "ad33fd8f-54cb-45e3-b5fe-adfa15ec5758",
+    "uuid": "24b57bff-0b7f-4f19-a80f-86557adf0cda"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ToolUseBlock",
+      "id": "toolu_01NZYZqLCtMJCJRgKkTSv5FA",
+      "name": "mcp__lc__get_weather",
+      "input": {
+       "city": "Paris"
+      }
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 797,
+     "cache_read_input_tokens": 12497,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 797
+     },
+     "output_tokens": 3,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4njNCJSSkTAWNA5CrJ",
+    "stop_reason": null,
+    "session_id": "ad33fd8f-54cb-45e3-b5fe-adfa15ec5758",
+    "uuid": "510d4727-28d1-493b-a4d0-7375692d6df9"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "TextBlock",
+      "text": "I attempted to get the weather for both Tokyo and Paris in parallel, but unfortunately both requests encountered internal errors and the results weren't available. This could be due to a temporary issue with the weather service. \n\nWould you like me to try again, or would you prefer to check the weather through another method?"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 7,
+     "cache_creation_input_tokens": 815,
+     "cache_read_input_tokens": 12497,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 815
+     },
+     "output_tokens": 2,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4o1DCCVr1EJGzH2iP2",
+    "stop_reason": null,
+    "session_id": "ad33fd8f-54cb-45e3-b5fe-adfa15ec5758",
+    "uuid": "e95c15fc-8649-4270-bd69-3f01cc60ab78"
+   },
+   {
+    "__type__": "ResultMessage",
+    "subtype": "success",
+    "duration_ms": 5606,
+    "duration_api_ms": 6691,
+    "is_error": false,
+    "num_turns": 1,
+    "session_id": "ad33fd8f-54cb-45e3-b5fe-adfa15ec5758",
+    "stop_reason": "tool_deferred",
+    "total_cost_usd": 0.0075944,
+    "usage": {
+     "input_tokens": 17,
+     "cache_creation_input_tokens": 1612,
+     "cache_read_input_tokens": 24994,
+     "output_tokens": 247,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 1612,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 7,
+       "output_tokens": 66,
+       "cache_read_input_tokens": 12497,
+       "cache_creation_input_tokens": 815,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 815
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "result": "",
+    "structured_output": null,
+    "model_usage": {
+     "claude-haiku-4-5-20251001": {
+      "inputTokens": 534,
+      "outputTokens": 17,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.000619,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     },
+     "claude-haiku-4-5": {
+      "inputTokens": 17,
+      "outputTokens": 247,
+      "cacheReadInputTokens": 24994,
+      "cacheCreationInputTokens": 1612,
+      "webSearchRequests": 0,
+      "costUSD": 0.0069754000000000005,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": {
+     "__type__": "DeferredToolUse",
+     "id": "toolu_01NZYZqLCtMJCJRgKkTSv5FA",
+     "name": "mcp__lc__get_weather",
+     "input": {
+      "city": "Paris"
+     }
+    },
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "7e1e4880-a66d-4527-99d4-4a6d762c1f9b"
+   }
+  ]
+ }
+]

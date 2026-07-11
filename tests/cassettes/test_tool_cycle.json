@@ -1,0 +1,385 @@
+[
+ {
+  "request": {
+   "model": "claude-haiku-4-5",
+   "n_entries": 1,
+   "prompt_was_str": false,
+   "has_lc_tools": true,
+   "resume": false
+  },
+  "messages": [
+   {
+    "__type__": "RateLimitEvent",
+    "rate_limit_info": {
+     "__type__": "RateLimitInfo",
+     "status": "allowed",
+     "resets_at": 1783781400,
+     "rate_limit_type": "five_hour",
+     "utilization": null,
+     "overage_status": "rejected",
+     "overage_resets_at": null,
+     "overage_disabled_reason": "org_level_disabled",
+     "raw": {
+      "status": "allowed",
+      "resetsAt": 1783781400,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
+     }
+    },
+    "uuid": "22e23c8f-fbfa-4a9e-8b5f-e99b546495f3",
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ThinkingBlock",
+      "thinking": "The user is asking for the weather in Tokyo and suggesting I use the get_weather function. Let me call that function with \"Tokyo\" as the city parameter.",
+      "signature": "Eo8DCpMBCA8YAipAvVlbfi4nfzrsEIDTW90VuRA8kf/kaAjzJZ6mhQ0hkIIGKxupOAAPd6LvLQUTnkd216e+2kSaAvlpeC5L8HfI2zIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgwZe9U72QNmBs78tk4aDIZlpnLKLM/VmAYwViIwWLy5ry0//QoDAfIgdV628HsqyJyOwSiAx5QL5EzQn1SCx2Bn8DiqVrLGR+xtQcl7KqgBSG45XSpUWHW/kMQwmw1zIdLFfYtCKc9igi7UjaXt7Rwh8FIluvOSXYraVDuPSPKdNSIb1sRM8HlhimNL63YndreQ2LlQWOW2ZN4PrXIHeZ6iHy5+Fk66BFpjeCYFl8Ndp+gJXtBV7YXgGMqm7Ui+8R5yqkyX+V45bpqk3WUQ8wPUvgeKSe3XizqvHMOTR5fXFOCir0lU+QBD1pbv31kOvnuq+20n8h+aGAE="
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 13285,
+     "cache_read_input_tokens": 0,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 13285
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4myQmeLiTCbewchApd",
+    "stop_reason": null,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "uuid": "dd3f55a8-9f22-46dc-ac97-1262946cc13a"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ToolUseBlock",
+      "id": "toolu_01Uns9ATtpBCUkF2EkzLpzuS",
+      "name": "mcp__lc__get_weather",
+      "input": {
+       "city": "Tokyo"
+      }
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 13285,
+     "cache_read_input_tokens": 0,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 13285
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4myQmeLiTCbewchApd",
+    "stop_reason": null,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "uuid": "f1d95652-726a-4b97-9f22-1a22db557358"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "TextBlock",
+      "text": "I encountered an error while trying to fetch the weather for Tokyo. The weather service returned an internal error. This could be a temporary issue with the weather API. \n\nCould you try again in a moment, or would you like me to help you with something else?"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 7,
+     "cache_creation_input_tokens": 701,
+     "cache_read_input_tokens": 12497,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 701
+     },
+     "output_tokens": 2,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4n7zwyf8SBGEKjgWyC",
+    "stop_reason": null,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "uuid": "1f188681-de45-42c6-8383-175f59a2feb9"
+   },
+   {
+    "__type__": "ResultMessage",
+    "subtype": "success",
+    "duration_ms": 3857,
+    "duration_api_ms": 5409,
+    "is_error": false,
+    "num_turns": 1,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "stop_reason": "tool_deferred",
+    "total_cost_usd": 0.0306087,
+    "usage": {
+     "input_tokens": 17,
+     "cache_creation_input_tokens": 13986,
+     "cache_read_input_tokens": 12497,
+     "output_tokens": 157,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 13986,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 7,
+       "output_tokens": 57,
+       "cache_read_input_tokens": 12497,
+       "cache_creation_input_tokens": 701,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 701
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "result": "",
+    "structured_output": null,
+    "model_usage": {
+     "claude-haiku-4-5-20251001": {
+      "inputTokens": 525,
+      "outputTokens": 12,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.000585,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     },
+     "claude-haiku-4-5": {
+      "inputTokens": 17,
+      "outputTokens": 157,
+      "cacheReadInputTokens": 12497,
+      "cacheCreationInputTokens": 13986,
+      "webSearchRequests": 0,
+      "costUSD": 0.0300237,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": {
+     "__type__": "DeferredToolUse",
+     "id": "toolu_01Uns9ATtpBCUkF2EkzLpzuS",
+     "name": "mcp__lc__get_weather",
+     "input": {
+      "city": "Tokyo"
+     }
+    },
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "efad255e-1541-430b-80cc-5c4639c1ba8e"
+   }
+  ]
+ },
+ {
+  "request": {
+   "model": "claude-haiku-4-5",
+   "n_entries": 0,
+   "prompt_was_str": false,
+   "has_lc_tools": true,
+   "resume": true
+  },
+  "messages": [
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ThinkingBlock",
+      "thinking": "The user is asking me to continue from where I left off. I was trying to get the weather for Tokyo, but the function call resulted in an error. The user is asking me to continue, which likely means they want me to try again or provide some alternative approach.\n\nLet me try calling the weather function again for Tokyo.",
+      "signature": "ErYECpMBCA8YAipAg2D1pVU6suoxIFd0JboIRE62Sa7ZOloueSW08+kko7TAGvFMPDfaLvZ5o5oD2eept50zeRZ0Td0ov4ukQQjH8zIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgw8jVrFRdhv31MbiKMaDPdqGwsYhHpyTTBWaCIwc62cKhuI4vO2eGT0fA7IuqW4uu0bOzCPedvs/w1hpfMiSp0T3XZbJgrNWQeT1ZcvKs8CzI/esBFvnMrvvExsO7GTFQAvPaKgOWZ2FOEBk4sbgZxtBxZsGuRx9EllMvuiDuVYMbcnmkLYYaaZzWwgOQVGgsfF25zEIZcZ0gRn8s6dAVuj9EPRigXVMlriZBFGW/9NfI3ej4m2OQDLXJ4NJtpNmJUG/OUCsShdrHz2TSVMTLRvN8UHw3lzpXuGHbM1ODFY0/HdLKJ1ORE5ajs3Yx22+0gCHnzoy/lu3g1svjIHAW76q7i0qNquOXZ0Uxxp3mfr0crg2Wz38BVEZB0ULK5FwcyB29YT+IfivBJdhoM2f/g7i0jFOkfiEdOYGN/Er/nR7kySLwffqJ1PJeDVVp1PQ61xovV8g00zC9lj1Jd1rgRZSSF/rjswMdRzcfFPsLw+NEFdQA54/egXZLP3g8RqxJZWsRh4Pd+cNfzWFJ3GQlh+Mpip0tu6Tvtwc/NgErcYAQ=="
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 155,
+     "cache_read_input_tokens": 13285,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 155
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4nM7VMcNWFDmCkGKM4",
+    "stop_reason": null,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "uuid": "f88be964-0095-4ec5-98d4-1625a59de332"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ToolUseBlock",
+      "id": "toolu_01LAH1eL86s2Cwi2CuwTKLvs",
+      "name": "mcp__lc__get_weather",
+      "input": {
+       "city": "Tokyo"
+      }
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 155,
+     "cache_read_input_tokens": 13285,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 155
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4nM7VMcNWFDmCkGKM4",
+    "stop_reason": null,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "uuid": "6ccc28c0-42dc-4040-9929-862ac6e4121a"
+   },
+   {
+    "__type__": "RateLimitEvent",
+    "rate_limit_info": {
+     "__type__": "RateLimitInfo",
+     "status": "allowed",
+     "resets_at": 1783781400,
+     "rate_limit_type": "five_hour",
+     "utilization": null,
+     "overage_status": "rejected",
+     "overage_resets_at": null,
+     "overage_disabled_reason": "org_level_disabled",
+     "raw": {
+      "status": "allowed",
+      "resetsAt": 1783781400,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
+     }
+    },
+    "uuid": "3ace801d-755a-463f-9048-93030b8082c1",
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "TextBlock",
+      "text": "Great! Here's the weather for Tokyo:\n\n**Tokyo Weather:** 25\u00b0C (77\u00b0F) and sunny \u2600\ufe0f\n\nNice conditions in Tokyo today!"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 6,
+     "cache_creation_input_tokens": 145,
+     "cache_read_input_tokens": 13198,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 145
+     },
+     "output_tokens": 1,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011Ccv4nWTovTWo8G42gLozu",
+    "stop_reason": null,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "uuid": "905ccc38-c148-4597-b415-518f630f9860"
+   },
+   {
+    "__type__": "ResultMessage",
+    "subtype": "success",
+    "duration_ms": 3689,
+    "duration_api_ms": 3654,
+    "is_error": false,
+    "num_turns": 2,
+    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "stop_reason": "end_turn",
+    "total_cost_usd": 0.0041293,
+    "usage": {
+     "input_tokens": 16,
+     "cache_creation_input_tokens": 300,
+     "cache_read_input_tokens": 26483,
+     "output_tokens": 173,
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 300,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 6,
+       "output_tokens": 39,
+       "cache_read_input_tokens": 13198,
+       "cache_creation_input_tokens": 145,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 145
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "result": "Great! Here's the weather for Tokyo:\n\n**Tokyo Weather:** 25\u00b0C (77\u00b0F) and sunny \u2600\ufe0f\n\nNice conditions in Tokyo today!",
+    "structured_output": null,
+    "model_usage": {
+     "claude-haiku-4-5": {
+      "inputTokens": 16,
+      "outputTokens": 173,
+      "cacheReadInputTokens": 26483,
+      "cacheCreationInputTokens": 300,
+      "webSearchRequests": 0,
+      "costUSD": 0.0041293,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000
+     }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": null,
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "b6928e59-3a4d-4e0b-8fa0-3ce4405b31b8"
+   }
+  ]
+ }
+]
