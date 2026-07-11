@@ -14,12 +14,15 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import logging
 import threading
 import time
 from collections import OrderedDict
 from concurrent.futures import Future
 from dataclasses import dataclass
 from typing import Any
+
+logger = logging.getLogger("langchain_claude_cli")
 
 
 @dataclass
@@ -74,8 +77,10 @@ class ClientPool:
             if entry is None:
                 return False
             if entry.sig != sig or (time.time() - entry.last_used) > self._ttl:
+                logger.debug("pool: evict %s (sig/ttl)", session_id[:8])
                 self._evict_locked(session_id)
                 return False
+            logger.debug("pool: hit %s", session_id[:8])
             return True
 
     async def run_turn(

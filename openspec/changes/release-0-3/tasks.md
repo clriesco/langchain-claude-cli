@@ -10,11 +10,11 @@
 
 ## 2. Watchdog + logging
 
-- [ ] 2.1 S10 — spike: gap máximo real entre mensajes SDK en generación larga sin partial messages (sonnet + thinking) → fija default pure-LLM
-- [ ] 2.2 `inactivity_timeout` en `_collect2` y `_astream` (wait_for por mensaje + aclose + `ClaudeCliError`); defaults según spike (agéntico: None)
-- [ ] 2.3 Logger `langchain_claude_cli` con NullHandler; eventos DEBUG (sesión, pool, defer/delivery) e INFO/WARNING (reintentos, watchdog, degradaciones)
-- [ ] 2.4 Tests: watchdog con cassette de stream truncado (unit, sin CLI) + verificación de no-huérfanos; logging capturado con caplog
-- [ ] 2.5 Reportar issue upstream en claude-agent-sdk (stream que no termina al morir el CLI) con repro mínimo
+- [x] 2.1 S10 — spike: gap máximo real entre mensajes SDK en generación larga sin partial messages (sonnet + thinking) → fija default pure-LLM
+- [x] 2.2 `inactivity_timeout` en `_collect2` y `_astream` (wait_for por mensaje + aclose + `ClaudeCliError`); defaults según spike (agéntico: None)
+- [x] 2.3 Logger `langchain_claude_cli` con NullHandler; eventos DEBUG (sesión, pool, defer/delivery) e INFO/WARNING (reintentos, watchdog, degradaciones)
+- [x] 2.4 Tests: watchdog con cassette de stream truncado (unit, sin CLI) + verificación de no-huérfanos; logging capturado con caplog
+- [x] 2.5 Reportar issue upstream en claude-agent-sdk (stream que no termina al morir el CLI) con repro mínimo
 
 ## 3. Tests de contrato nightly
 

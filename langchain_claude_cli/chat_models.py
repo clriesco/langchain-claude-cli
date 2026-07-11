@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import os
 import queue
 import threading
@@ -60,6 +61,8 @@ from langchain_claude_cli.exceptions import (
     classify_status,
 )
 from langchain_claude_cli.tools import ClaudeTool, normalize_tools
+
+logger = logging.getLogger("langchain_claude_cli")
 
 _RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504, 529}
 
@@ -238,6 +241,11 @@ class ChatClaudeCli(BaseChatModel):
     """Prefix-cache backend: "memory" (default), "file" (persistent JSON in
     ~/.langchain-claude-cli/, conversations survive restarts) or a
     SessionStoreBackend instance."""
+    inactivity_timeout: float | Literal["auto"] | None = "auto"
+    """Abort the run if the SDK stream stays silent this long (a dead CLI can
+    leave the stream open forever — v0.2 finding). "auto": 120s in pure-LLM
+    mode (spike S10: worst observed inter-message gap ~26s), disabled in
+    agentic mode (slow tools produce legitimate silence). None disables."""
     persistent: bool = False
     """Keep a live ClaudeSDKClient per conversation: multi-turn resumes skip
     the subprocess restart (~2x faster per reused turn, spike S8) and enable
@@ -291,6 +299,11 @@ class ChatClaudeCli(BaseChatModel):
             ],
             default=str,
         )
+
+    def _effective_inactivity(self) -> float | None:
+        if self.inactivity_timeout == "auto":
+            return None if self.builtin_tools is not None else 120.0
+        return self.inactivity_timeout
 
     def interrupt(self, session_id: str | None = None) -> None:
         """Cancel the active run of a persistent conversation (persistent=True)."""
@@ -532,7 +545,9 @@ class ChatClaudeCli(BaseChatModel):
                 key in delivery.tool_results_by_key
                 or name in delivery.tool_results_by_name
             ):
+                logger.debug("tools: deliver %s", name)
                 return {}
+            logger.debug("tools: defer %s", name)
             return {
                 "hookSpecificOutput": {
                     "hookEventName": "PreToolUse",
@@ -762,6 +777,14 @@ class ChatClaudeCli(BaseChatModel):
             converted = convert_lc_messages(messages)
             entries = self._build_prompt_entries(resolution, converted)
 
+        logger.debug(
+            "session: %s%s, suffix=%d msgs, pending_tools=%d",
+            resolution.strategy,
+            f" ({resolution.session_id[:8]}…)" if resolution.session_id else "",
+            len(resolution.suffix),
+            len(delivery.tool_results),
+        )
+
         tool_choice = kwargs.get("tool_choice")
         system = converted.system
         if tool_choice not in (None, "auto") and not (
@@ -813,11 +836,32 @@ class ChatClaudeCli(BaseChatModel):
         last_error: Exception | None = None
         for attempt in range(attempts):
             collected: dict[str, Any] = {"result": None, "msgs": [], "rate_limit": None}
+            inactivity = self._effective_inactivity()
 
             async def _collect2() -> None:
                 stream = query(prompt=_stream_entries(), options=options)
+                iterator = stream.__aiter__()
                 try:
-                    async for msg in stream:
+                    while True:
+                        try:
+                            if inactivity is not None:
+                                msg = await asyncio.wait_for(
+                                    iterator.__anext__(), timeout=inactivity
+                                )
+                            else:
+                                msg = await iterator.__anext__()
+                        except StopAsyncIteration:
+                            break
+                        except TimeoutError:
+                            logger.warning(
+                                "watchdog: no SDK activity for %.0fs, aborting run",
+                                inactivity,
+                            )
+                            raise ClaudeCliTimeoutError(
+                                f"no SDK activity for {inactivity}s "
+                                "(inactivity_timeout; the CLI process may have "
+                                "died — see README reliability notes)"
+                            ) from None
                         if isinstance(msg, AssistantMessage):
                             collected["msgs"].append(msg)
                         elif isinstance(msg, ResultMessage):
@@ -839,6 +883,8 @@ class ChatClaudeCli(BaseChatModel):
                     )
                 else:
                     await _collect2()
+            except ClaudeCliTimeoutError:
+                raise  # inactivity watchdog: already typed and logged
             except TimeoutError as e:
                 raise ClaudeCliTimeoutError(
                     f"run exceeded timeout={self.default_request_timeout}s"
@@ -854,6 +900,12 @@ class ChatClaudeCli(BaseChatModel):
                     raise
                 last_error = e  # transport/process error: retry
                 if attempt + 1 < attempts:
+                    logger.info(
+                        "transport error (%s), retry %d/%d",
+                        type(e).__name__,
+                        attempt + 1,
+                        attempts - 1,
+                    )
                     await asyncio.sleep(min(2**attempt, 8))
                     continue
                 raise

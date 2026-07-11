@@ -78,5 +78,6 @@ asyncio_mode = "auto"
 markers = [
     "compile: placeholder test to compile integration tests without running them",
     "integration: tests that require an authenticated claude CLI",
+    "contract: CLI behavior invariants the design depends on (live CLI, bounded cost)",
 ]
-addopts = "-m 'not integration'"
+addopts = "-m 'not integration and not contract'"
