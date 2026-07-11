@@ -8,7 +8,7 @@ description = "Drop-in ChatAnthropic replacement backed by the Claude Code CLI â
 license = { text = "MIT" }
 readme = "README.md"
 authors = [{ name = "Charly LÃ³pez", email = "clriesco@gmail.com" }]
-version = "0.2.1"
+version = "0.3.0"
 requires-python = ">=3.10"
 keywords = ["langchain", "claude", "anthropic", "claude-code", "claude-agent-sdk"]
 classifiers = [

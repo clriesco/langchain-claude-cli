@@ -24,5 +24,5 @@
 
 ## 4. Release
 
-- [ ] 4.1 mypy + ruff + suite completa (cassettes + unit) en verde; README (sección testing/watchdog/logging) + CHANGELOG 0.3.0
+- [x] 4.1 mypy + ruff + suite completa (cassettes + unit) en verde; README (sección testing/watchdog/logging) + CHANGELOG 0.3.0
 - [ ] 4.2 Bump 0.3.0, tag `v0.3.0`, push; verificar publicación y nightly manual (`workflow_dispatch`) del contrato

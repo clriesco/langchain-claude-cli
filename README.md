@@ -132,6 +132,13 @@ agent = create_agent(
 
 > Production tip: always set `timeout` — if the CLI process is killed mid-run (e.g. subscription rate-limit exhaustion) the SDK stream can hang instead of raising.
 
+## Reliability
+
+- **Inactivity watchdog** (0.3): if the SDK stream goes silent (`inactivity_timeout`, default 120s in pure-LLM mode, disabled in agentic mode where slow tools are legitimate), the run aborts with `ClaudeCliTimeoutError` and the subprocess is cleaned up — a dead CLI can otherwise leave the stream open forever ([upstream issue](https://github.com/anthropics/claude-agent-sdk-python/issues/1110)).
+- **Logging**: enable `logging.getLogger("langchain_claude_cli")` at DEBUG to see session resolution, pool activity, tool defer/delivery and retries.
+- **Deterministic tests**: the core E2E suite runs against recorded cassettes (no CLI, no quota — `tests/cassette_tests`, refresh with `RECORD_CASSETTES=1`); a nightly [contract suite](.github/workflows/contract.yml) checks the live CLI still honors the behavior invariants the design depends on.
+- `history_mode="replay"` is **experimental**: fidelity of injected assistant turns is race-dependent (contract finding).
+
 ## How conversations work
 
 `BaseChatModel` is stateless; the CLI is a stateful session. The bridge is a **session prefix-cache**:

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 — 2026-07-11
+
+### Added
+- Inactivity watchdog (`inactivity_timeout`, default 120s pure-LLM / disabled agentic): a dead CLI process can no longer hang an invoke forever; aborts with `ClaudeCliTimeoutError` and cleans up the subprocess.
+- Structured logging under the `langchain_claude_cli` logger (session resolution, pool, defer/delivery, retries, watchdog).
+- Deterministic cassette test harness (record/replay of SDK streams) — core E2E suite runs with no CLI and no quota.
+- Nightly CLI contract suite (`contract.yml`): checks the live CLI still honors the behavior invariants the library depends on.
+
+### Changed
+- `history_mode="replay"` documented as **experimental**: the CLI generates live replies to historical user messages and may prefer them over injected assistant turns (contract-suite finding).
+
 ## 0.2.1 — 2026-07-11
 
 ### Fixed
