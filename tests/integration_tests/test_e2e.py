@@ -243,7 +243,10 @@ def test_agentic_stream_shows_tool_activity(tmp_path):
         cwd=str(tmp_path),
     )
     tool_blocks, text = [], ""
-    for chunk in agent.stream("Read data.txt and tell me the value of MAGIC."):
+    for chunk in agent.stream(
+        "Read the file data.txt (it is in your current working directory, "
+        "use a relative path) and tell me the value of MAGIC."
+    ):
         if isinstance(chunk.content, str):
             text += chunk.content
         else:

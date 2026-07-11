@@ -9,7 +9,7 @@ consumes YOUR Claude subscription quota.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 try:
     from langchain.agents.middleware.types import AgentMiddleware
@@ -66,7 +66,7 @@ class ClaudeCodeToolsMiddleware(AgentMiddleware):
             model=model,
             builtin_tools=builtin_tools,
             cwd=cwd,
-            permission_mode=permission_mode,  # type: ignore[arg-type]
+            permission_mode=cast(Any, permission_mode),
             sandbox=sandbox,
             max_budget_usd=max_budget_usd,
             max_turns=max_turns,

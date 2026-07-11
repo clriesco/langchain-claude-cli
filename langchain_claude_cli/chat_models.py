@@ -10,6 +10,7 @@ ChatAnthropic accepts.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 import queue
@@ -645,7 +646,7 @@ class ChatClaudeCli(BaseChatModel):
         try:
             import base64
 
-            import anthropic
+            import anthropic  # type: ignore[import-not-found]
 
             client = anthropic.Anthropic(api_key=key)
             meta = client.beta.files.retrieve_metadata(file_id)
@@ -814,13 +815,22 @@ class ChatClaudeCli(BaseChatModel):
             collected: dict[str, Any] = {"result": None, "msgs": [], "rate_limit": None}
 
             async def _collect2() -> None:
-                async for msg in query(prompt=_stream_entries(), options=options):
-                    if isinstance(msg, AssistantMessage):
-                        collected["msgs"].append(msg)
-                    elif isinstance(msg, ResultMessage):
-                        collected["result"] = msg
-                    elif isinstance(msg, RateLimitEvent):
-                        collected["rate_limit"] = rate_limit_to_meta(msg)
+                stream = query(prompt=_stream_entries(), options=options)
+                try:
+                    async for msg in stream:
+                        if isinstance(msg, AssistantMessage):
+                            collected["msgs"].append(msg)
+                        elif isinstance(msg, ResultMessage):
+                            collected["result"] = msg
+                        elif isinstance(msg, RateLimitEvent):
+                            collected["rate_limit"] = rate_limit_to_meta(msg)
+                finally:
+                    # Close INSIDE the still-running loop: on timeout/cancel,
+                    # skipping this leaves an orphaned `claude` subprocess
+                    # (the SDK's cleanup tasks die with the loop) that keeps
+                    # consuming quota and contends with the next run.
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait_for(cast(Any, stream).aclose(), timeout=5)
 
             try:
                 if self.default_request_timeout:

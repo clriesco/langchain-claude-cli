@@ -26,7 +26,7 @@
 
 - [x] 4.1 `RateLimitEvent` → `response_metadata["rate_limit"]` (según S6)
 - [x] 4.2 Bloques Files API en `_convert.py` (según S7): passthrough / materialización con API key / omisión con warning
-- [ ] 4.3 Cablear `ChatModelIntegrationTests` de langchain-tests con xfails documentados de niveles B/C
+- [x] 4.3 Cablear `ChatModelIntegrationTests` de langchain-tests con xfails documentados de niveles B/C
 - [x] 4.4 Tests unitarios de 4.1-4.2
 - [x] 4.5 Taxonomía de excepciones tipadas: `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError` mapeadas desde `api_error_status` y excepciones del SDK (para políticas de fallback tipo EC-30 sin clasificar texto) + tests
 - [x] 4.6 Blindaje OAuth: spike de si `env={"ANTHROPIC_API_KEY": ""}` la anula para el CLI; parámetro `auth="oauth"|"inherit"` (default `"oauth"` que garantiza que el subproceso no use API key) + test que verifica que con key en el entorno se factura a la suscripción
@@ -40,7 +40,7 @@
 
 ## 6. Calidad y release
 
-- [ ] 6.1 mypy strict + ruff limpios; suite completa unit + integración en verde
-- [ ] 6.2 README: secciones nuevas (persistencia, cliente persistente, replay, middleware) + actualizar matriz de paridad (rate_limit, files API)
-- [ ] 6.3 CHANGELOG.md con 0.1.0 y 0.2.0
+- [x] 6.1 mypy strict + ruff limpios; suite completa unit + integración en verde
+- [x] 6.2 README: secciones nuevas (persistencia, cliente persistente, replay, middleware) + actualizar matriz de paridad (rate_limit, files API)
+- [x] 6.3 CHANGELOG.md con 0.1.0 y 0.2.0
 - [ ] 6.4 Bump a 0.2.0, tag `v0.2.0`, push — release automático vía Trusted Publishing; verificar en PyPI

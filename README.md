@@ -108,6 +108,30 @@ structured.invoke("What is the capital of France?")
 
 Uses the CLI's native `output_format` (JSON-schema enforced by the model runtime, not by prompt begging). `include_raw=True` and dict/TypedDict schemas are supported.
 
+## What's new in 0.2
+
+- **Persistent sessions** — `session_store="file"`: conversations survive process restarts (the prefix-cache lives in `~/.langchain-claude-cli/`); LangGraph `thread_id` is used as a recovery path when checkpointers trim history.
+- **Persistent client** — `persistent=True`: a live CLI client per conversation (~2× faster reused turns), plus `interrupt()` and `set_session_model()` for hot model swaps.
+- **Typed errors** — `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError`, `ClaudeCliBudgetExceededError`: build retry/fallback policies without parsing error text. Tip: set `max_retries=0` if your own fallback layer should see raw errors.
+- **OAuth guard** — `auth="oauth"` (default) neutralizes an inherited `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` so the CLI can never silently bill your API account instead of using your subscription. `auth="inherit"` opts out.
+- **Rate-limit visibility** — `response_metadata["rate_limit"]` reports your subscription window: `{status, type, utilization, resets_at}`.
+- **`history_mode="replay"`** — replay arbitrary histories with full role fidelity (costs one generation per historical user message).
+- **Files API blocks** — `file_id` sources are materialized via the Anthropic API when a key is available (used only for the download, never passed to the CLI) or dropped with a warning.
+- **`ClaudeCodeToolsMiddleware`** — give ANY LangChain agent (any provider as orchestrator) a `claude_code` tool that delegates filesystem/shell work to a sandboxed, budget-capped Claude Code run:
+
+```python
+from langchain.agents import create_agent
+from langchain_claude_cli.middleware import ClaudeCodeToolsMiddleware
+
+agent = create_agent(
+    model=any_chat_model,   # ChatOpenAI, ChatAnthropic, ChatClaudeCli...
+    tools=[...],
+    middleware=[ClaudeCodeToolsMiddleware(cwd="/workspace", max_budget_usd=0.5)],
+)
+```
+
+> Production tip: always set `timeout` — if the CLI process is killed mid-run (e.g. subscription rate-limit exhaustion) the SDK stream can hang instead of raising.
+
 ## How conversations work
 
 `BaseChatModel` is stateless; the CLI is a stateful session. The bridge is a **session prefix-cache**:

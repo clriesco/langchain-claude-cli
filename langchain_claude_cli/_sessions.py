@@ -21,7 +21,7 @@ import threading
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Protocol
+from typing import IO, Any, Literal, Protocol
 
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 
@@ -135,7 +135,7 @@ class FileStore:
             tmp.replace(self._path)
 
     @staticmethod
-    def _flock(f, *, exclusive: bool) -> None:
+    def _flock(f: IO[Any], *, exclusive: bool) -> None:
         try:
             import fcntl
 

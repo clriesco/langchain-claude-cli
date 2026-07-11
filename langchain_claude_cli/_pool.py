@@ -97,7 +97,7 @@ class ClientPool:
         async def _turn() -> tuple[list[Any], Any, dict | None]:
             from claude_agent_sdk import AssistantMessage, RateLimitEvent, ResultMessage
 
-            async def _stream():
+            async def _stream() -> Any:
                 for e in entries:
                     yield e
 
