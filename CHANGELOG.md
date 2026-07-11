@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-07-11
+
+### Fixed
+- Added the missing `py.typed` marker (PEP 561): downstream type checkers now see the package's inline types (downstream report).
+
 ## 0.2.0 — 2026-07-11
 
 ### Added
