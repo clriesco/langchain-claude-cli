@@ -2,7 +2,7 @@
 
 
 ### Requirement: Prefix-cache de sesiones
-El modelo SHALL mantener una caché LRU thread-safe que mapea fingerprints de prefijos de historial a `session_id` del CLI. Cuando el historial entrante es igual a un prefijo conocido más un sufijo nuevo, el modelo SHALL reanudar la sesión (`resume=session_id`) enviando únicamente el sufijo. Tras cada generación SHALL registrarse el fingerprint del historial completo resultante. El fingerprint SHALL ignorar metadata volátil (ids de run, response_metadata) y basarse en roles y contenido normalizado.
+El modelo SHALL mantener una caché thread-safe que mapea fingerprints de prefijos de historial a `session_id` del CLI, con **backend pluggable**: `InMemoryStore` (default, comportamiento v0.1) o `FileStore` persistente en disco (JSON con file-locking y escritura atómica, poda LRU), seleccionable vía `session_store="memory"|"file"` o instancia propia. Cuando el historial entrante es igual a un prefijo conocido más un sufijo nuevo, el modelo SHALL reanudar la sesión (`resume=session_id`) enviando únicamente el sufijo. Tras cada generación SHALL registrarse el fingerprint del historial completo resultante. El fingerprint SHALL ignorar metadata volátil y ser estable entre procesos. Cuando el invoke incluye `config.configurable.thread_id`, el mapeo `thread_id → session_id` SHALL registrarse como vía de recuperación adicional cuando el prefijo no matchea.
 
 #### Scenario: Conversación que crece por append
 - **WHEN** se invoca con `[H1]` obteniendo `A1`, y después con `[H1, A1, H2]`
@@ -12,12 +12,26 @@ El modelo SHALL mantener una caché LRU thread-safe que mapea fingerprints de pr
 - **WHEN** dos conversaciones distintas usan la misma instancia del modelo de forma intercalada
 - **THEN** cada una reanuda su propia sesión sin cruzar contextos
 
-### Requirement: Degradación controlada para historial arbitrario
-Cuando el historial no matchea ningún prefijo cacheado, el modelo SHALL usar la mejor estrategia disponible en este orden: (1) replay completo del historial en una sesión nueva si el CLI acepta mensajes assistant en el input (según spike S3); (2) aplanado a texto como último recurso, emitiendo `ClaudeCliCompatWarning` de degradación de fidelidad.
+#### Scenario: La conversación sobrevive a un reinicio del proceso
+- **WHEN** un proceso con `session_store="file"` genera una conversación, termina, y un proceso nuevo invoca con ese historial más un mensaje nuevo
+- **THEN** el proceso nuevo reanuda la sesión CLI original con fidelidad completa (sin flatten ni warning)
 
-#### Scenario: Historial editado
-- **WHEN** se invoca con un historial cuyo prefijo no coincide con ninguna sesión conocida (p.ej. mensajes recortados por trimming)
-- **THEN** la invocación funciona por replay o flatten, y si es flatten se emite el warning de degradación
+#### Scenario: Recuperación por thread_id
+- **WHEN** un checkpointer de LangGraph recorta el historial de un `thread_id` conocido de modo que ningún prefijo matchea
+- **THEN** el modelo reanuda la sesión asociada al `thread_id` en lugar de degradar a flatten, si puede determinar el sufijo nuevo
+
+
+### Requirement: Degradación controlada para historial arbitrario
+Cuando el historial no matchea ningún prefijo cacheado ni thread conocido, el modelo SHALL usar la estrategia según `history_mode`: `"auto"`/`"flatten"` → structured flatten en un solo mensaje de usuario (multimodal preservado) con `ClaudeCliCompatWarning`; `"replay"` (EXPERIMENTAL: la fidelidad de los turnos assistant inyectados es dependiente de carrera — hallazgo de la suite de contrato) → reproducción del historial completo como mensajes user/assistant en una sesión nueva, emitiendo un warning único que documenta su coste (una generación por mensaje user histórico).
+
+#### Scenario: Historial editado con modo auto
+- **WHEN** se invoca con `history_mode="auto"` y un historial cuyo prefijo no coincide con ninguna sesión conocida
+- **THEN** la invocación funciona por structured flatten y se emite el warning de degradación
+
+#### Scenario: Replay fiel opt-in
+- **WHEN** se invoca con `history_mode="replay"` y un historial arbitrario que contiene un turno assistant con un dato distintivo
+- **THEN** la respuesta demuestra que el turno assistant fue honrado con fidelidad de roles (no aplanado) y se emitió el warning de coste
+
 
 ### Requirement: session_id explícito
 El usuario SHALL poder fijar la sesión manualmente vía `config={"configurable": {"session_id": ...}}` (prioridad sobre el prefix-cache) para reanudar sesiones existentes del CLI, replicando la capacidad de la librería antigua.
