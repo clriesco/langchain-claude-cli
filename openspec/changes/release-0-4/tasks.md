@@ -16,9 +16,9 @@
 
 ## 3. Interrupt stateless
 
-- [ ] 3.1 Registro de runs activos por instancia + `ClaudeCliInterruptedError`
-- [ ] 3.2 `interrupt()` generalizado (task.cancel vía call_soon_threadsafe; pool si existe)
-- [ ] 3.3 Tests: fake colgado + interrupt desde otro hilo (sin CLI), no-huérfanos, invoke posterior OK
+- [x] 3.1 Registro de runs activos por instancia + `ClaudeCliInterruptedError`
+- [x] 3.2 `interrupt()` generalizado (task.cancel vía call_soon_threadsafe; pool si existe)
+- [x] 3.3 Tests: fake colgado + interrupt desde otro hilo (sin CLI), no-huérfanos, invoke posterior OK
 
 ## 4. Release
 

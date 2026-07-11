@@ -85,11 +85,12 @@ def test_default_model_has_no_pool():
     assert llm._pool is None
 
 
-def test_interrupt_requires_persistent():
+def test_interrupt_with_no_active_run_raises():
+    """v0.4: interrupt() works in any mode, but needs something to cancel."""
     import pytest
 
     from langchain_claude_cli import ClaudeCliError
 
     llm = ChatClaudeCli()
-    with pytest.raises(ClaudeCliError, match="persistent"):
+    with pytest.raises(ClaudeCliError, match="no active run"):
         llm.interrupt()

@@ -31,6 +31,10 @@ class ClaudeCliTimeoutError(ClaudeCliError, TimeoutError):
     """The run exceeded the configured timeout."""
 
 
+class ClaudeCliInterruptedError(ClaudeCliError):
+    """The run was cancelled via interrupt()."""
+
+
 _AUTH_MARKERS = (
     "authentication",
     "unauthorized",

@@ -89,3 +89,69 @@ def test_watchdog_warning_logged(monkeypatch, caplog):
         with pytest.raises(ClaudeCliTimeoutError):
             llm.invoke("hi")
     assert any("watchdog" in r.message for r in caplog.records)
+
+
+def test_stateless_interrupt(monkeypatch):
+    """v0.4: interrupt() cancels an active stateless run from another thread."""
+    import threading
+    import time
+
+    import claude_agent_sdk
+
+    from langchain_claude_cli import ClaudeCliInterruptedError
+
+    closed: list = []
+    monkeypatch.setattr(claude_agent_sdk, "query", _hanging_query_factory(closed))
+    llm = ChatClaudeCli(
+        model="claude-haiku-4-5", inactivity_timeout=None, max_retries=0
+    )
+    errors: list = []
+
+    def _invoke():
+        try:
+            llm.invoke("hi")
+        except BaseException as e:
+            errors.append(e)
+
+    t = threading.Thread(target=_invoke)
+    t.start()
+    deadline = time.time() + 5
+    while not llm._active_runs and time.time() < deadline:
+        time.sleep(0.05)
+    assert llm._active_runs, "run never registered"
+    llm.interrupt()
+    t.join(timeout=10)
+    assert not t.is_alive(), "interrupt did not end the invoke"
+    assert errors and isinstance(errors[0], ClaudeCliInterruptedError), errors
+    assert closed, "stream was not closed (orphan risk)"
+    assert not llm._active_runs, "run not unregistered"
+
+
+def test_external_cancellation_not_masked(monkeypatch):
+    """A cancel NOT triggered by interrupt() must stay a CancelledError."""
+    import asyncio
+
+    import claude_agent_sdk
+
+    monkeypatch.setattr(claude_agent_sdk, "query", _hanging_query_factory([]))
+    llm = ChatClaudeCli(model="claude-haiku-4-5", inactivity_timeout=None)
+
+    async def main():
+        task = asyncio.create_task(
+            llm._agenerate(
+                [
+                    __import__(
+                        "langchain_core.messages", fromlist=["HumanMessage"]
+                    ).HumanMessage(content="hi")
+                ]
+            )
+        )
+        await asyncio.sleep(0.2)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            return "cancelled"
+        return "wrong"
+
+    assert asyncio.run(main()) == "cancelled"

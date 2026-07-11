@@ -11,6 +11,7 @@ import contextlib
 import logging
 import threading
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.callbacks import (
@@ -35,6 +36,7 @@ from langchain_claude_cli._sessions import Resolution
 from langchain_claude_cli.exceptions import (
     ClaudeCliBudgetExceededError,
     ClaudeCliError,
+    ClaudeCliInterruptedError,
     ClaudeCliTimeoutError,
     classify_status,
 )
@@ -182,6 +184,38 @@ class _RunnerMixin:
         stop: list[str] | None,
         **kwargs: Any,
     ) -> tuple[list[Any], Any, ConvertedHistory, Resolution, dict[str, Any] | None]:
+        """Run one CLI query; registered as an interruptible active run (v0.4).
+
+        interrupt() cancels the underlying task; the cancellation surfaces
+        here as ClaudeCliInterruptedError (subprocess cleanup is guaranteed
+        by the stream-close finally inside the run).
+        """
+        token = SimpleNamespace(
+            loop=asyncio.get_running_loop(),
+            task=asyncio.current_task(),
+            session_id=None,
+            interrupted=False,
+        )
+        self._active_runs[id(token)] = token
+        try:
+            return await self._arun_query_inner(
+                messages, stop, _run_token=token, **kwargs
+            )
+        except asyncio.CancelledError:
+            if token.interrupted:
+                raise ClaudeCliInterruptedError(
+                    "run cancelled via interrupt()"
+                ) from None
+            raise
+        finally:
+            self._active_runs.pop(id(token), None)
+
+    async def _arun_query_inner(
+        self: ChatClaudeCli,
+        messages: list[BaseMessage],
+        stop: list[str] | None,
+        **kwargs: Any,
+    ) -> tuple[list[Any], Any, ConvertedHistory, Resolution, dict[str, Any] | None]:
         """Run one CLI query with retries/timeout; return (assistant_msgs, result, ...)."""
         try:
             from claude_agent_sdk import (
@@ -212,6 +246,10 @@ class _RunnerMixin:
             resolution = Resolution(strategy="new", suffix=list(messages))
             converted = convert_lc_messages(messages)
             entries = self._build_prompt_entries(resolution, converted)
+
+        run_token = kwargs.pop("_run_token", None)
+        if run_token is not None:
+            run_token.session_id = resolution.session_id
 
         logger.debug(
             "session: %s%s, suffix=%d msgs, pending_tools=%d",

@@ -137,6 +137,7 @@ class ChatClaudeCli(_OptionsMixin, _RunnerMixin, _StreamingMixin, BaseChatModel)
 
     _session_cache: SessionCache = PrivateAttr(default=None)  # type: ignore[assignment]
     _pool: ClientPool | None = PrivateAttr(default=None)
+    _active_runs: dict[int, Any] = PrivateAttr(default_factory=dict)
 
     # ── Compat warnings ──────────────────────────────────────
 
@@ -167,10 +168,26 @@ class ChatClaudeCli(_OptionsMixin, _RunnerMixin, _StreamingMixin, BaseChatModel)
         return self
 
     def interrupt(self, session_id: str | None = None) -> None:
-        """Cancel the active run of a persistent conversation (persistent=True)."""
-        if self._pool is None:
-            raise ClaudeCliError("interrupt() requires persistent=True")
-        self._pool.interrupt(session_id)
+        """Cancel active run(s) of this model instance (any mode, v0.4).
+
+        With a live persistent client for the target session, cancels via the
+        CLI protocol; otherwise cancels the asyncio task of the active
+        stateless run(s) — the cancelled invoke raises
+        ClaudeCliInterruptedError and the subprocess is cleaned up. Without
+        session_id, ALL active runs of the instance are cancelled.
+        """
+        interrupted = False
+        if self._pool is not None and self._pool.has(session_id):
+            self._pool.interrupt(session_id)
+            interrupted = True
+        for token in list(self._active_runs.values()):
+            if session_id and token.session_id and token.session_id != session_id:
+                continue
+            token.interrupted = True
+            token.loop.call_soon_threadsafe(token.task.cancel)
+            interrupted = True
+        if not interrupted:
+            raise ClaudeCliError("interrupt(): no active run to cancel")
 
     def set_session_model(
         self, model: str | None, session_id: str | None = None
