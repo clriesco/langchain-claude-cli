@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-07-11
+
+### Fixed
+- **Python 3.10**: `asyncio.TimeoutError` and builtin `TimeoutError` are distinct classes before 3.11 — both the inactivity watchdog (0.3.0) and the total `timeout` (latent since 0.1.0) failed to catch the timeout on 3.10, surfacing as `CancelledError` instead of `ClaudeCliTimeoutError`.
+- CI: fixed venv clash with setup-uv and missing `langchain` test dependency — the matrix (3.10/3.12/3.13) is now actually green.
+
 ## 0.3.0 — 2026-07-11
 
 ### Added
