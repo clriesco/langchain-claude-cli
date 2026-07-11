@@ -853,7 +853,7 @@ class ChatClaudeCli(BaseChatModel):
                                 msg = await iterator.__anext__()
                         except StopAsyncIteration:
                             break
-                        except TimeoutError:
+                        except (TimeoutError, asyncio.TimeoutError):  # 3.10: distinct classes
                             logger.warning(
                                 "watchdog: no SDK activity for %.0fs, aborting run",
                                 inactivity,
@@ -886,7 +886,7 @@ class ChatClaudeCli(BaseChatModel):
                     await _collect2()
             except ClaudeCliTimeoutError:
                 raise  # inactivity watchdog: already typed and logged
-            except TimeoutError as e:
+            except (TimeoutError, asyncio.TimeoutError) as e:  # 3.10: distinct classes
                 raise ClaudeCliTimeoutError(
                     f"run exceeded timeout={self.default_request_timeout}s"
                 ) from e
