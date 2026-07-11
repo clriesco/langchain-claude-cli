@@ -46,6 +46,7 @@ test = [
     "syrupy>=4.9.0,<6.0.0",
     "langchain-tests>=1.1.2,<2.0.0",
     "langgraph>=1.0.8",
+    "langchain>=1.0,<2",
 ]
 dev = ["langchain-anthropic>=1.4.0"]
 
