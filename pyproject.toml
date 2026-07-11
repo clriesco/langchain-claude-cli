@@ -74,6 +74,13 @@ warn_return_any = false
 module = "tests.*"
 disallow_untyped_defs = false
 
+# Mixin pattern (v0.4 split): methods annotate `self: ChatClaudeCli` so mypy
+# fully checks attribute access; the "erased type of self" [misc] complaint is
+# the known cost of that pattern and is silenced only for the mixin modules.
+[[tool.mypy.overrides]]
+module = ["langchain_claude_cli._options", "langchain_claude_cli._runner", "langchain_claude_cli._streaming"]
+disable_error_code = ["misc"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 markers = [
