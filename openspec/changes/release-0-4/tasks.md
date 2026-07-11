@@ -10,9 +10,9 @@
 
 ## 2. Replay del pool
 
-- [ ] 2.1 `FakeClaudeSDKClient` + fixture `client_cassette` (replay) y grabación envolviendo el cliente real
-- [ ] 2.2 Grabar cassettes del flujo persistente (warm-up + reuso multi-turn) y migrar los tests del pool
-- [ ] 2.3 Suite en verde sin CLI
+- [x] 2.1 `FakeClaudeSDKClient` + fixture `client_cassette` (replay) y grabación envolviendo el cliente real
+- [x] 2.2 Grabar cassettes del flujo persistente (warm-up + reuso multi-turn) y migrar los tests del pool
+- [x] 2.3 Suite en verde sin CLI
 
 ## 3. Interrupt stateless
 
@@ -22,5 +22,5 @@
 
 ## 4. Release
 
-- [ ] 4.1 README/CHANGELOG; mypy+ruff+suite completa
+- [x] 4.1 README/CHANGELOG; mypy+ruff+suite completa
 - [ ] 4.2 Bump 0.4.0, tag, verificar PyPI

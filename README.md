@@ -111,7 +111,8 @@ Uses the CLI's native `output_format` (JSON-schema enforced by the model runtime
 ## What's new in 0.2
 
 - **Persistent sessions** — `session_store="file"`: conversations survive process restarts (the prefix-cache lives in `~/.langchain-claude-cli/`); LangGraph `thread_id` is used as a recovery path when checkpointers trim history.
-- **Persistent client** — `persistent=True`: a live CLI client per conversation (~2× faster reused turns), plus `interrupt()` and `set_session_model()` for hot model swaps.
+- **Persistent client** — `persistent=True`: a live CLI client per conversation (~2× faster reused turns), plus `set_session_model()` for hot model swaps.
+- **`interrupt()`** (0.4): cancel active runs in ANY mode — persistent conversations via the CLI protocol, stateless invokes via task cancellation (the cancelled invoke raises `ClaudeCliInterruptedError`; the subprocess is cleaned up).
 - **Typed errors** — `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError`, `ClaudeCliBudgetExceededError`: build retry/fallback policies without parsing error text. Tip: set `max_retries=0` if your own fallback layer should see raw errors.
 - **OAuth guard** — `auth="oauth"` (default) neutralizes an inherited `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` so the CLI can never silently bill your API account instead of using your subscription. `auth="inherit"` opts out.
 - **Rate-limit visibility** — `response_metadata["rate_limit"]` reports your subscription window: `{status, type, utilization, resets_at}`.

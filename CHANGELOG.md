@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-07-12
+
+### Added
+- `interrupt()` now works in any mode: stateless runs are cancelled via task cancellation and raise `ClaudeCliInterruptedError` (new), with guaranteed subprocess cleanup. Without `session_id` it cancels all active runs of the instance.
+- Cassette harness covers the persistent-client path (`ClaudeSDKClient` double): the pool's warm-up/reuse flow is now tested deterministically without the CLI.
+
+### Changed
+- Internal split of `chat_models.py` (1357 → 345 lines) into focused modules (`_options`, `_runner`, `_streaming`) — pure refactor, public API unchanged.
+- `interrupt()` with nothing to cancel now raises `ClaudeCliError("no active run to cancel")` instead of requiring `persistent=True`.
+
 ## 0.3.1 — 2026-07-11
 
 ### Fixed

@@ -1,0 +1,320 @@
+{
+ "query": [
+  {
+   "request": {
+    "model": "claude-haiku-4-5",
+    "n_entries": 1,
+    "prompt_was_str": false,
+    "has_lc_tools": false,
+    "resume": false
+   },
+   "messages": [
+    {
+     "__type__": "RateLimitEvent",
+     "rate_limit_info": {
+      "__type__": "RateLimitInfo",
+      "status": "allowed",
+      "resets_at": 1783817400,
+      "rate_limit_type": "five_hour",
+      "utilization": null,
+      "overage_status": "rejected",
+      "overage_resets_at": null,
+      "overage_disabled_reason": "org_level_disabled",
+      "raw": {
+       "status": "allowed",
+       "resetsAt": 1783817400,
+       "rateLimitType": "five_hour",
+       "overageStatus": "rejected",
+       "overageDisabledReason": "org_level_disabled",
+       "isUsingOverage": false
+      }
+     },
+     "uuid": "1f4d7e56-0bc9-473e-91a9-78dfe17ca401",
+     "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f"
+    },
+    {
+     "__type__": "AssistantMessage",
+     "content": [
+      {
+       "__type__": "ThinkingBlock",
+       "thinking": "The user is asking me to say \"OK\" and mentioning their lucky number is 13. This is a simple request that doesn't require any function calls. They're just asking me to acknowledge or respond with \"OK\".\n\nThis seems like a straightforward request - no Railway functions need to be called here.",
+       "signature": "EpkECpMBCA8YAipAYBomFBUODDx4kbT3gbEB3Nt7xP8vfOAZEA+IqscB6r63/tq/B+j6n3Iit44LfJruhsq3fKnJ48ngCrLI5C3k1DIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgy3sDgNRj/0S9SL258aDHdSBpbLApu2oKp2+CIwyAczjzGsBbqQtzYSZ1z5+KR0NZOgdals90AcVfcU7fpI3wl9Jyzi1MtiqujJdt8tKrICwMUW8r+6KFP8/Zso1UY/IDb0jRPso6I7EehoEVvxHqKvjjgQVP6R988yf81H653E+Etzj3dEotA7RJDMj2Y2JnAtvDjMsTIZootCvCCX7nLPoe55idp6wXVshcfnc2YLyGWAdqzubDmv4ZepQXeldyRfnnrm1PL9irN4Tt1kf6FCXFpw82olgJKg/79lUoqZNYbVi2HKytrg/GfyTCkaMDSSjH2RHdrSrDEPEpSaPZr3QpQw0Rw76oyro4k2LgzZr3YYLMiuNILpnjLhrJ08kRItp35hcX8Sy7HsOWzVdhMRKBrFex8lIo+l8/qxJoJldmPzl6Y8K8Sjqg+QznQ2xvgeL/K1kA4ckvfmHdLm94/NYOtY3/glID7n9G8GBpjLP7oz8H69ySaKdPO9ttocdnobGAE="
+      }
+     ],
+     "model": "claude-haiku-4-5-20251001",
+     "parent_tool_use_id": null,
+     "error": null,
+     "usage": {
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 13225,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "inference_geo": "not_available"
+     },
+     "message_id": "msg_011Ccw6t86oeb8iU3jfhhvCh",
+     "stop_reason": null,
+     "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f",
+     "uuid": "3d4e7825-959f-410f-b3b0-78ca47bcf479"
+    },
+    {
+     "__type__": "AssistantMessage",
+     "content": [
+      {
+       "__type__": "TextBlock",
+       "text": "OK"
+      }
+     ],
+     "model": "claude-haiku-4-5-20251001",
+     "parent_tool_use_id": null,
+     "error": null,
+     "usage": {
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 13225,
+      "cache_creation": {
+       "ephemeral_5m_input_tokens": 0,
+       "ephemeral_1h_input_tokens": 0
+      },
+      "output_tokens": 4,
+      "service_tier": "standard",
+      "inference_geo": "not_available"
+     },
+     "message_id": "msg_011Ccw6t86oeb8iU3jfhhvCh",
+     "stop_reason": null,
+     "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f",
+     "uuid": "69924644-627c-4285-9d20-a5f6e83c46e2"
+    },
+    {
+     "__type__": "ResultMessage",
+     "subtype": "success",
+     "duration_ms": 1766,
+     "duration_api_ms": 2823,
+     "is_error": false,
+     "num_turns": 1,
+     "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f",
+     "stop_reason": "end_turn",
+     "total_cost_usd": 0.0022935,
+     "usage": {
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 13225,
+      "output_tokens": 76,
+      "server_tool_use": {
+       "web_search_requests": 0,
+       "web_fetch_requests": 0
+      },
+      "service_tier": "standard",
+      "cache_creation": {
+       "ephemeral_1h_input_tokens": 0,
+       "ephemeral_5m_input_tokens": 0
+      },
+      "inference_geo": "not_available",
+      "iterations": [
+       {
+        "input_tokens": 10,
+        "output_tokens": 76,
+        "cache_read_input_tokens": 13225,
+        "cache_creation_input_tokens": 0,
+        "cache_creation": {
+         "ephemeral_5m_input_tokens": 0,
+         "ephemeral_1h_input_tokens": 0
+        },
+        "type": "message"
+       }
+      ],
+      "speed": "standard"
+     },
+     "result": "OK",
+     "structured_output": null,
+     "model_usage": {
+      "claude-haiku-4-5-20251001": {
+       "inputTokens": 526,
+       "outputTokens": 11,
+       "cacheReadInputTokens": 0,
+       "cacheCreationInputTokens": 0,
+       "webSearchRequests": 0,
+       "costUSD": 0.000581,
+       "contextWindow": 200000,
+       "maxOutputTokens": 32000
+      },
+      "claude-haiku-4-5": {
+       "inputTokens": 10,
+       "outputTokens": 76,
+       "cacheReadInputTokens": 13225,
+       "cacheCreationInputTokens": 0,
+       "webSearchRequests": 0,
+       "costUSD": 0.0017125,
+       "contextWindow": 200000,
+       "maxOutputTokens": 32000
+      }
+     },
+     "permission_denials": [],
+     "deferred_tool_use": null,
+     "errors": null,
+     "api_error_status": null,
+     "uuid": "4c4a1f91-3d35-40d3-ad15-d7fccb327af9"
+    }
+   ]
+  }
+ ],
+ "clients": [
+  {
+   "meta": {
+    "model": "claude-haiku-4-5",
+    "resume": true
+   },
+   "turns": [
+    {
+     "entries": 1,
+     "messages": [
+      {
+       "__type__": "AssistantMessage",
+       "content": [
+        {
+         "__type__": "ThinkingBlock",
+         "thinking": "The user's lucky number is 13. They want me to add 1 to it and provide only the digits.\n\n13 + 1 = 14",
+         "signature": "EtoCCpMBCA8YAipAiexKtdJsSAoakRAhLQK32hQu46P0U76yC/5bJQxQOO9dEyARcceMthtGFZY1NPb8DPoLFz3/hX9YkbcSCzqNpjIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgx04fEFfgfSgAq0I9EaDO405XCs/3IqvkZs/iIw4F859s+ExsvZzfGBnuaqZMTQ+8abE2s1mD2I5/1VVeccw4JHbmpbqobz6BEuyp69KnQjhEs9au4bltR488SiomVbLq1jwM6tMDVjpuN7jdzxG8GUSUwIKI6gSDaU4E10ne7ZgavpHN6uqrNkhtwHJ+gHux/Q69RXrRkWVddMSq+bcGmruRBSbINOj6hrKv9AK1uKXGuyAOlHLE5/1rYpApnemUKe4RgB"
+        }
+       ],
+       "model": "claude-haiku-4-5-20251001",
+       "parent_tool_use_id": null,
+       "error": null,
+       "usage": {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 13242,
+        "cache_creation": {
+         "ephemeral_5m_input_tokens": 0,
+         "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 3,
+        "service_tier": "standard",
+        "inference_geo": "not_available"
+       },
+       "message_id": "msg_011Ccw6tMcALSpMNhW6o2KHu",
+       "stop_reason": null,
+       "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f",
+       "uuid": "fb1ef31e-0608-4dde-a5f1-d1037932c963"
+      },
+      {
+       "__type__": "AssistantMessage",
+       "content": [
+        {
+         "__type__": "TextBlock",
+         "text": "14"
+        }
+       ],
+       "model": "claude-haiku-4-5-20251001",
+       "parent_tool_use_id": null,
+       "error": null,
+       "usage": {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 13242,
+        "cache_creation": {
+         "ephemeral_5m_input_tokens": 0,
+         "ephemeral_1h_input_tokens": 0
+        },
+        "output_tokens": 3,
+        "service_tier": "standard",
+        "inference_geo": "not_available"
+       },
+       "message_id": "msg_011Ccw6tMcALSpMNhW6o2KHu",
+       "stop_reason": null,
+       "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f",
+       "uuid": "ba87c724-9c5d-49f5-909e-6ea0f3a50db2"
+      },
+      {
+       "__type__": "RateLimitEvent",
+       "rate_limit_info": {
+        "__type__": "RateLimitInfo",
+        "status": "allowed",
+        "resets_at": 1783817400,
+        "rate_limit_type": "five_hour",
+        "utilization": null,
+        "overage_status": "rejected",
+        "overage_resets_at": null,
+        "overage_disabled_reason": "org_level_disabled",
+        "raw": {
+         "status": "allowed",
+         "resetsAt": 1783817400,
+         "rateLimitType": "five_hour",
+         "overageStatus": "rejected",
+         "overageDisabledReason": "org_level_disabled",
+         "isUsingOverage": false
+        }
+       },
+       "uuid": "d644022c-88cb-4045-9bbb-4affec76ed0f",
+       "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f"
+      },
+      {
+       "__type__": "ResultMessage",
+       "subtype": "success",
+       "duration_ms": 1532,
+       "duration_api_ms": 1510,
+       "is_error": false,
+       "num_turns": 1,
+       "session_id": "fc28f0aa-2dba-4c15-881e-6dedb300638f",
+       "stop_reason": "end_turn",
+       "total_cost_usd": 0.0015692000000000002,
+       "usage": {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 13242,
+        "output_tokens": 47,
+        "server_tool_use": {
+         "web_search_requests": 0,
+         "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+         "ephemeral_1h_input_tokens": 0,
+         "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "not_available",
+        "iterations": [
+         {
+          "input_tokens": 10,
+          "output_tokens": 47,
+          "cache_read_input_tokens": 13242,
+          "cache_creation_input_tokens": 0,
+          "cache_creation": {
+           "ephemeral_5m_input_tokens": 0,
+           "ephemeral_1h_input_tokens": 0
+          },
+          "type": "message"
+         }
+        ],
+        "speed": "standard"
+       },
+       "result": "14",
+       "structured_output": null,
+       "model_usage": {
+        "claude-haiku-4-5": {
+         "inputTokens": 10,
+         "outputTokens": 47,
+         "cacheReadInputTokens": 13242,
+         "cacheCreationInputTokens": 0,
+         "webSearchRequests": 0,
+         "costUSD": 0.0015692000000000002,
+         "contextWindow": 200000,
+         "maxOutputTokens": 32000
+        }
+       },
+       "permission_denials": [],
+       "deferred_tool_use": null,
+       "errors": null,
+       "api_error_status": null,
+       "uuid": "a3282666-bb58-42ad-a0f8-9f77af18837d"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -17,6 +17,7 @@ def cassette(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch):
         "query",
         player.recording_query if RECORDING else player.replay_query,
     )
+    monkeypatch.setattr(claude_agent_sdk, "ClaudeSDKClient", player.make_client)
     yield player
     player.save()
     if not RECORDING:
