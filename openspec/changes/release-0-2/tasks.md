@@ -36,7 +36,7 @@
 - [x] 5.1 Paquete `langchain_claude_cli/middleware/` con `ClaudeCodeToolsMiddleware` (import lazy de `langchain`; el paquete principal no lo requiere)
 - [x] 5.2 Manejo de límites: budget excedido → resultado de error de tool (no excepción al grafo); sandbox y builtin_tools aplicados por ejecución
 - [x] 5.3 Tests de integración: `create_agent` + middleware resuelve tarea de filesystem; presupuesto excedido no rompe el grafo; import sin langchain no falla
-- [ ] 5.4 Probar el middleware en el testbed con ambos providers como orquestador
+- [x] 5.4 Probar el middleware en el testbed con ambos providers como orquestador
 
 ## 6. Calidad y release
 
