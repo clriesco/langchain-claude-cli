@@ -147,3 +147,58 @@ def test_base64_document_blocks_unaffected():
     }
     out = convert_lc_messages([HumanMessage(content=[inline])])
     assert out.entries[0]["message"]["content"][0] == inline
+
+
+# ── Regression: retryable error with no attempts left must raise ──
+# https://github.com/clriesco/langchain-claude-cli — downstream report:
+# "Retryable API error results are silently returned as empty AIMessages"
+
+
+def _error_result(status: int):
+    from claude_agent_sdk import ResultMessage
+
+    return ResultMessage(
+        subtype="success",
+        duration_ms=10,
+        duration_api_ms=5,
+        is_error=True,
+        num_turns=1,
+        session_id="sess-err",
+        api_error_status=status,
+    )
+
+
+def _fake_query_factory(status: int, calls: list):
+    def fake_query(*, prompt, options):
+        async def gen():
+            calls.append(1)
+            # drain the prompt stream like the real SDK does
+            async for _ in prompt:
+                pass
+            yield _error_result(status)
+
+        return gen()
+
+    return fake_query
+
+
+def test_retryable_error_raises_with_max_retries_zero(monkeypatch):
+    import claude_agent_sdk
+
+    calls: list = []
+    monkeypatch.setattr(claude_agent_sdk, "query", _fake_query_factory(429, calls))
+    llm = ChatClaudeCli(model="claude-haiku-4-5", max_retries=0)
+    with pytest.raises(ClaudeCliRateLimitError):
+        llm.invoke("hi")
+    assert len(calls) == 1  # no retries with max_retries=0
+
+
+def test_retryable_error_raises_after_exhausting_retries(monkeypatch):
+    import claude_agent_sdk
+
+    calls: list = []
+    monkeypatch.setattr(claude_agent_sdk, "query", _fake_query_factory(529, calls))
+    llm = ChatClaudeCli(model="claude-haiku-4-5", max_retries=1)
+    with pytest.raises(ClaudeCliOverloadedError):
+        llm.invoke("hi")
+    assert len(calls) == 2  # initial + 1 retry, then raise (not silent return)

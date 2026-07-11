@@ -14,6 +14,7 @@
 - langchain-tests standard integration suite wired with documented xfails.
 
 ### Fixed
+- **Retryable API errors (429/5xx/529) with no attempts left were silently returned as empty AIMessages** instead of raising — worst with `max_retries=0`, where a single 429 produced an undetectable empty completion (downstream report). They now raise the corresponding typed exception (`ClaudeCliRateLimitError`/`ClaudeCliOverloadedError`).
 - Budget exhaustion no longer consumes retries (raises `ClaudeCliBudgetExceededError` immediately); explicit CLI error results are no longer retried.
 - Orphaned `claude` subprocesses after a timeout: the SDK stream is now closed inside the still-running event loop.
 

@@ -870,6 +870,10 @@ class ChatClaudeCli(BaseChatModel):
                 if attempt + 1 < attempts:
                     await asyncio.sleep(min(2**attempt, 8))
                     continue
+                # No attempts left: raise, never return the error result as a
+                # normal (empty) completion (reported downstream: silent empty
+                # AIMessage with max_retries=0 on a single 429/529).
+                raise last_error
             if (
                 result is not None
                 and result.is_error
