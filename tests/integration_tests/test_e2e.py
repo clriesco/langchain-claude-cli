@@ -30,7 +30,7 @@ def _text(content) -> str:
 
 @pytest.fixture()
 def llm() -> ChatClaudeCli:
-    return ChatClaudeCli(model=MODEL)
+    return ChatClaudeCli(model=MODEL, timeout=120)
 
 
 @tool
@@ -389,3 +389,72 @@ def test_persistent_interrupt_then_next_invoke():
         assert "DONE" in _text(r.content).upper()
     finally:
         llm._pool.close()
+
+
+# ── v0.2: middleware ─────────────────────────────────────────
+
+
+def test_middleware_delegates_filesystem_task(tmp_path):
+    from langchain.agents import create_agent
+
+    from langchain_claude_cli.middleware import ClaudeCodeToolsMiddleware
+
+    (tmp_path / "notes.txt").write_text("MAGIC=QUIMERA88")
+    agent = create_agent(
+        model=ChatClaudeCli(model=MODEL, timeout=120),
+        tools=[],
+        middleware=[
+            ClaudeCodeToolsMiddleware(
+                model=MODEL,
+                builtin_tools=["Read", "Glob"],
+                cwd=str(tmp_path),
+                timeout=120,
+            )
+        ],
+    )
+    out = agent.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Use claude_code to read notes.txt in the workspace "
+                    "and tell me the value of MAGIC.",
+                }
+            ]
+        }
+    )
+    assert "QUIMERA88" in _text(out["messages"][-1].content)
+
+
+def test_middleware_budget_error_does_not_break_graph(tmp_path):
+    from langchain.agents import create_agent
+
+    from langchain_claude_cli.middleware import ClaudeCodeToolsMiddleware
+
+    agent = create_agent(
+        model=ChatClaudeCli(model=MODEL, timeout=120),
+        tools=[],
+        middleware=[
+            ClaudeCodeToolsMiddleware(
+                model=MODEL,
+                builtin_tools=["Read"],
+                cwd=str(tmp_path),
+                max_budget_usd=0.000001,
+                timeout=120,
+            )
+        ],
+    )
+    out = agent.invoke(
+        {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Use claude_code to list the files in the workspace. "
+                    "If it fails, report the failure reason.",
+                }
+            ]
+        }
+    )
+    final = _text(out["messages"][-1].content).lower()
+    assert final, "graph broke instead of completing"
+    assert "budget" in final or "fail" in final or "error" in final or "unable" in final

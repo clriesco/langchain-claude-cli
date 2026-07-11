@@ -77,11 +77,11 @@ def test_thread_id_recovery_when_prefix_missing():
 
     # Checkpointer trimmed the history: prefix no longer matches,
     # but the thread has grown beyond the registered count.
-    trimmed = history[2:] + [HumanMessage(content="q-new")]  # 3 msgs < count 4
+    trimmed = [*history[2:], HumanMessage(content="q-new")]  # 3 msgs < count 4
     res = cache.resolve(trimmed, thread_id="th-1")
     assert res.strategy == "new"  # can't determine suffix -> safe fallback
 
-    grown = history[:3] + [AIMessage(content="edited"), HumanMessage(content="q-new")]
+    grown = [*history[:3], AIMessage(content="edited"), HumanMessage(content="q-new")]
     res2 = cache.resolve(grown, thread_id="th-1")
     assert res2.strategy == "resume"
     assert res2.session_id == "sess-T"

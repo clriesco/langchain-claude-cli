@@ -76,3 +76,8 @@ Con `include_partial_messages=True`, `StreamEvent.event` trae el stream raw de l
 - Con `ANTHROPIC_API_KEY` (falsa) en el entorno del proceso, el CLI la usa y el run falla — el propio CLI avisa: *"ANTHROPIC_API_KEY or another auth source is set and takes precedence over your claude.ai login"*. Confirma el incidente de billing reportado downstream.
 - `options.env = {"ANTHROPIC_API_KEY": ""}` **neutraliza** la herencia: el run funciona por OAuth.
 - **Implementación 4.6**: `auth="oauth"` (default) inyecta `ANTHROPIC_API_KEY=""` y `ANTHROPIC_AUTH_TOKEN=""` en `options.env` salvo que el usuario los haya definido explícitamente en su `env`; `auth="inherit"` mantiene el comportamiento actual.
+
+## Hallazgo operativo (durante 5.4) — cuelgue del SDK si el CLI muere a mitad de run
+
+- Con la ventana de rate limit agotada, el subproceso `claude` muere (exit 1); el SDK loggea "Fatal error in message reader" pero **el stream de `query()` no termina ni lanza** → un collect sin timeout espera indefinidamente.
+- Mitigaciones: el middleware fija `timeout=600s` por defecto (un tool que nunca retorna congela el grafo); recomendación en README de fijar `timeout` en producción. Candidato a report upstream en claude-agent-sdk.
