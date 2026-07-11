@@ -32,9 +32,7 @@ def test_watchdog_aborts_hung_stream(monkeypatch):
 
     closed: list = []
     monkeypatch.setattr(claude_agent_sdk, "query", _hanging_query_factory(closed))
-    llm = ChatClaudeCli(
-        model="claude-haiku-4-5", inactivity_timeout=0.2, max_retries=0
-    )
+    llm = ChatClaudeCli(model="claude-haiku-4-5", inactivity_timeout=0.2, max_retries=0)
     with pytest.raises(ClaudeCliTimeoutError, match="no SDK activity"):
         llm.invoke("hi")
     assert closed, "stream was not closed (orphan risk)"
@@ -45,8 +43,9 @@ def test_watchdog_defaults():
     assert ChatClaudeCli(builtin_tools=["Read"])._effective_inactivity() is None
     assert ChatClaudeCli(inactivity_timeout=None)._effective_inactivity() is None
     assert (
-        ChatClaudeCli(builtin_tools=["Read"], inactivity_timeout=30.0)
-        ._effective_inactivity()
+        ChatClaudeCli(
+            builtin_tools=["Read"], inactivity_timeout=30.0
+        )._effective_inactivity()
         == 30.0
     )
 

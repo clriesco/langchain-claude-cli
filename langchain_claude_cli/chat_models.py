@@ -720,9 +720,10 @@ class ChatClaudeCli(BaseChatModel):
         if self.history_mode == "replay" and (has_assistant or user_count > 1):
             warn_once(
                 "history_replay",
-                "history_mode='replay': the full history is replayed with role "
-                "fidelity; each historical user message triggers a live "
-                "generation (cost grows with history length).",
+                "history_mode='replay' is EXPERIMENTAL: each historical user "
+                "message triggers a live generation (cost grows with history "
+                "length) and the model may prefer its own live replies over "
+                "the injected assistant turns (fidelity is race-dependent).",
             )
             return entries
         if self.history_mode == "flatten" or has_assistant or user_count > 1:

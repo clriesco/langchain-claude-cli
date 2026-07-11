@@ -81,3 +81,8 @@ Con `include_partial_messages=True`, `StreamEvent.event` trae el stream raw de l
 
 - Con la ventana de rate limit agotada, el subproceso `claude` muere (exit 1); el SDK loggea "Fatal error in message reader" pero **el stream de `query()` no termina ni lanza** → un collect sin timeout espera indefinidamente.
 - Mitigaciones: el middleware fija `timeout=600s` por defecto (un tool que nunca retorna congela el grafo); recomendación en README de fijar `timeout` en producción. Candidato a report upstream en claude-agent-sdk.
+
+## Hallazgo de contrato (v0.3, primer run de la suite) — replay assistant es race-dependent
+
+- El invariante S3 no es estable: el CLI genera una respuesta en vivo a cada mensaje user histórico, y el modelo puede preferir su propia respuesta sobre el turno assistant inyectado (observado: ignoró el codename inyectado y usó el suyo). En S3 ganó el inyectado por azar.
+- Acción: `history_mode="replay"` degradado a **experimental** (warning + README); el test de contrato conserva el invariante fuerte como xfail no estricto para detectar si el CLI lo estabiliza algún día.

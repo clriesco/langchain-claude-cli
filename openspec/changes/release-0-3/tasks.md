@@ -18,9 +18,9 @@
 
 ## 3. Tests de contrato nightly
 
-- [ ] 3.1 `tests/contract_tests/` con los invariantes S1-S9 como tests pytest marker `contract` (coste acotado: haiku + max_budget_usd por test)
-- [ ] 3.2 Workflow `contract.yml`: cron nightly + workflow_dispatch; instala CLI, secret `ANTHROPIC_API_KEY` + `auth="inherit"`; skip amable sin secret
-- [ ] 3.3 Ejecutar la suite de contrato en local (OAuth) una vez completa — verde antes de confiar en el nightly
+- [x] 3.1 `tests/contract_tests/` con los invariantes S1-S9 como tests pytest marker `contract` (coste acotado: haiku + max_budget_usd por test)
+- [x] 3.2 Workflow `contract.yml`: cron nightly + workflow_dispatch; instala CLI, secret `ANTHROPIC_API_KEY` + `auth="inherit"`; skip amable sin secret
+- [x] 3.3 Ejecutar la suite de contrato en local (OAuth) una vez completa — verde antes de confiar en el nightly
 
 ## 4. Release
 

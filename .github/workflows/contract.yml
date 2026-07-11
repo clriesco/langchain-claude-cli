@@ -1,0 +1,47 @@
+name: CLI Contract
+
+# Nightly check that the live Claude CLI still honors the behavior invariants
+# this library's design depends on (defer, resume re-fire, stream shapes...).
+# Auth: repo secret ANTHROPIC_API_KEY (no OAuth in CI) — bounded cost via
+# haiku + max_budget_usd per test. Skips gracefully when the secret is absent
+# (forks).
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret
+        id: check
+        run: |
+          if [ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "have_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ANTHROPIC_API_KEY secret not set — contract suite skipped"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.have_key == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.have_key == 'true'
+        with:
+          node-version: 22
+      - name: Install Claude CLI (latest)
+        if: steps.check.outputs.have_key == 'true'
+        run: npm install -g @anthropic-ai/claude-code && claude --version
+      - uses: astral-sh/setup-uv@v5
+        if: steps.check.outputs.have_key == 'true'
+        with:
+          python-version: "3.12"
+      - name: Install
+        if: steps.check.outputs.have_key == 'true'
+        run: uv venv && uv pip install -e . --group test
+      - name: Run contract suite
+        if: steps.check.outputs.have_key == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: .venv/bin/pytest tests/contract_tests -m contract -q
