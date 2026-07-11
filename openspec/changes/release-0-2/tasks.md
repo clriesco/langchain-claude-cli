@@ -43,4 +43,4 @@
 - [x] 6.1 mypy strict + ruff limpios; suite completa unit + integración en verde
 - [x] 6.2 README: secciones nuevas (persistencia, cliente persistente, replay, middleware) + actualizar matriz de paridad (rate_limit, files API)
 - [x] 6.3 CHANGELOG.md con 0.1.0 y 0.2.0
-- [ ] 6.4 Bump a 0.2.0, tag `v0.2.0`, push — release automático vía Trusted Publishing; verificar en PyPI
+- [x] 6.4 Bump a 0.2.0, tag `v0.2.0`, push — release automático vía Trusted Publishing; verificar en PyPI
