@@ -39,7 +39,7 @@ jobs:
           python-version: "3.12"
       - name: Install
         if: steps.check.outputs.have_key == 'true'
-        run: uv venv && uv pip install -e . --group test
+        run: uv venv --clear && uv pip install -e . --group test
       - name: Run contract suite
         if: steps.check.outputs.have_key == 'true'
         env:
