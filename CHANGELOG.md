@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 — 2026-07-13
+
+### Fixed
+- A contradictory CLI result (`is_error=true` + `subtype="success"`, seen under usage-window pressure) is no longer surfaced as a fatal untyped `Exception`: the turn's already-collected assistant messages are recovered as the success the CLI reported, or — when there is nothing to recover — a typed retryable `ClaudeCliOverloadedError` is raised so retry/fallback policies apply. Genuine error results (`error_max_turns`, 4xx/5xx/529, budget exceeded) are unchanged.
+
 ## 0.4.0 — 2026-07-12
 
 ### Added

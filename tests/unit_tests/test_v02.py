@@ -202,3 +202,120 @@ def test_retryable_error_raises_after_exhausting_retries(monkeypatch):
     with pytest.raises(ClaudeCliOverloadedError):
         llm.invoke("hi")
     assert len(calls) == 2  # initial + 1 retry, then raise (not silent return)
+
+
+# ── Regression: contradictory CLI result (is_error=true + subtype="success") ──
+# See ISSUE-contradictory-error-result.md. The CLI intermittently emits a
+# result flagged is_error yet labelled "success"; the SDK converts the ensuing
+# non-zero exit into Exception("...returned an error result: success"). It must
+# NOT be surfaced as a fatal untyped Exception.
+
+
+def _success_error_result():
+    """The contradictory result: is_error=True, errors=[], subtype='success'."""
+    from claude_agent_sdk import ResultMessage
+
+    return ResultMessage(
+        subtype="success",
+        duration_ms=10,
+        duration_api_ms=5,
+        is_error=True,
+        num_turns=1,
+        session_id="sess-succ",
+        errors=[],
+        api_error_status=None,  # a "success" outcome carries no HTTP status
+    )
+
+
+def _text_assistant(text: str):
+    from claude_agent_sdk import AssistantMessage, TextBlock
+
+    return AssistantMessage(content=[TextBlock(text=text)], model="claude-haiku-4-5")
+
+
+def _contradictory_query_factory(calls: list, *, with_messages: bool):
+    """Yield the turn's messages, then raise the SDK's success-error Exception."""
+
+    def fake_query(*, prompt, options):
+        async def gen():
+            calls.append(1)
+            async for _ in prompt:  # drain the prompt like the real SDK
+                pass
+            if with_messages:
+                yield _text_assistant("Hello from the recovered turn.")
+            yield _success_error_result()
+            # The SDK forwards the result above, THEN raises on process exit.
+            raise Exception("Claude Code returned an error result: success")
+
+        return gen()
+
+    return fake_query
+
+
+def test_contradictory_success_recovers_collected_messages(monkeypatch):
+    """Option A: assistant messages were collected — return them, do not raise."""
+    import claude_agent_sdk
+
+    calls: list = []
+    monkeypatch.setattr(
+        claude_agent_sdk,
+        "query",
+        _contradictory_query_factory(calls, with_messages=True),
+    )
+    llm = ChatClaudeCli(model="claude-haiku-4-5", max_retries=0)
+    msg = llm.invoke("hi")  # must NOT raise
+    assert msg.content == "Hello from the recovered turn."
+    assert len(calls) == 1  # no internal retry under max_retries=0
+
+
+def test_contradictory_success_empty_turn_raises_typed_retryable(monkeypatch):
+    """Option B: nothing collected — typed retryable error, not a bare Exception."""
+    import claude_agent_sdk
+
+    calls: list = []
+    monkeypatch.setattr(
+        claude_agent_sdk,
+        "query",
+        _contradictory_query_factory(calls, with_messages=False),
+    )
+    llm = ChatClaudeCli(model="claude-haiku-4-5", max_retries=0)
+    with pytest.raises(ClaudeCliOverloadedError) as exc_info:
+        llm.invoke("hi")
+    # Not the nonsensical "...: success" text, and a typed ClaudeCliError.
+    assert "returned an error result: success" not in str(exc_info.value)
+    assert isinstance(exc_info.value, ClaudeCliError)
+    assert len(calls) == 1  # respects max_retries=0
+
+
+def test_genuine_error_result_still_raises(monkeypatch):
+    """Regression guard: a real error result (error_max_turns) is unchanged."""
+    import claude_agent_sdk
+
+    def fake_query(*, prompt, options):
+        async def gen():
+            async for _ in prompt:
+                pass
+
+            from claude_agent_sdk import ResultMessage
+
+            yield ResultMessage(
+                subtype="error_max_turns",
+                duration_ms=10,
+                duration_api_ms=5,
+                is_error=True,
+                num_turns=2,
+                session_id="sess-maxturns",
+                errors=[],
+                api_error_status=None,
+            )
+            raise Exception("Claude Code returned an error result: error_max_turns")
+
+        return gen()
+
+    monkeypatch.setattr(claude_agent_sdk, "query", fake_query)
+    llm = ChatClaudeCli(model="claude-haiku-4-5", max_retries=0)
+    with pytest.raises(Exception) as exc_info:
+        llm.invoke("hi")
+    # Genuine error results are NOT recovered and NOT reclassified as overloaded.
+    assert not isinstance(exc_info.value, ClaudeCliOverloadedError)
+    assert "error_max_turns" in str(exc_info.value)

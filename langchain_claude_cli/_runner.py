@@ -37,6 +37,7 @@ from langchain_claude_cli.exceptions import (
     ClaudeCliBudgetExceededError,
     ClaudeCliError,
     ClaudeCliInterruptedError,
+    ClaudeCliOverloadedError,
     ClaudeCliTimeoutError,
     classify_status,
 )
@@ -47,6 +48,25 @@ if TYPE_CHECKING:
 logger = logging.getLogger("langchain_claude_cli")
 
 _RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504, 529}
+
+
+def _is_contradictory_success(result: Any, text: str) -> bool:
+    """Detect the CLI's contradictory ``is_error=true`` + ``subtype="success"``.
+
+    Under usage-window pressure the CLI sometimes emits a result flagged as an
+    error yet labelled ``success`` with no error text; the SDK turns the ensuing
+    non-zero exit into ``Exception("...returned an error result: success")``.
+    That is not a genuine error result (it carries no ``api_error_status`` and
+    the CLI itself said ``success``), so we must not treat it as terminal.
+
+    Prefer inspecting the already-collected ResultMessage; fall back to the
+    exception text when the result was not captured.
+    """
+    if result is not None and getattr(result, "is_error", False):
+        errors = getattr(result, "errors", None) or []
+        if not errors and getattr(result, "subtype", None) == "success":
+            return True
+    return text.rstrip().endswith("returned an error result: success")
 
 
 def _run_sync(coro: Any) -> Any:
@@ -372,7 +392,35 @@ class _RunnerMixin:
                     # Deliberate, user-set limit — terminal, never retried.
                     raise ClaudeCliBudgetExceededError(text) from e
                 if "returned an error result" in text:
-                    # Explicit CLI error result (not a transport failure):
+                    err_result = collected["result"]
+                    if _is_contradictory_success(err_result, text):
+                        # The CLI labelled the outcome "success" yet flagged
+                        # is_error (intermittent, account-level — see the bug
+                        # spec). Never surface this as a fatal untyped Exception.
+                        if collected["msgs"]:
+                            # Option A: the turn's assistant messages were
+                            # already collected before the trailing error
+                            # sentinel — recover them as the success the CLI
+                            # reported. Return directly: falling through to the
+                            # post-collection block below would re-raise on
+                            # is_error (a "success" result has no HTTP status).
+                            return (
+                                collected["msgs"],
+                                err_result,
+                                delivery,
+                                resolution,
+                                collected["rate_limit"],
+                            )
+                        # Option B: nothing to recover — raise a typed,
+                        # retryable error so the retry/fallback policy owns it,
+                        # instead of a fatal untyped throw.
+                        raise ClaudeCliOverloadedError(
+                            "contradictory CLI result "
+                            "(is_error=true, subtype=success) with no assistant "
+                            "messages; treating as transient"
+                        ) from e
+                    # Genuine CLI error result (error_max_turns,
+                    # error_during_execution, ...): not a transport failure —
                     # retrying would just repeat the same failing run.
                     raise
                 last_error = e  # transport/process error: retry
