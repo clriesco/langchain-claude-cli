@@ -23,4 +23,4 @@
 ## 4. Release
 
 - [x] 4.1 README/CHANGELOG; mypy+ruff+suite completa
-- [ ] 4.2 Bump 0.4.0, tag, verificar PyPI
+- [x] 4.2 Bump 0.4.0, tag, verificar PyPI
