@@ -22,6 +22,18 @@ El kwarg explícito primero (compatibilidad hacia atrás y control del llamante)
 el ambiental como respaldo. `ensure_config()` siempre devuelve un dict, así que
 el resto del código no cambia de forma.
 
+**Del config ambiental solo se lee `thread_id`.** La clave `session_id` está
+sobrecargada en el ecosistema: el field spec por defecto de
+`RunnableWithMessageHistory` (langchain-core, `runnables/history.py`) se llama
+literalmente `session_id` y significa "clave de historial de chat", no "UUID de
+sesión del CLI". Si el puente honrara un `session_id` ambiental, un consumidor
+con `RunnableWithMessageHistory` pasaría de "funciona con flatten" a
+`resume=<clave-ajena>` con solo el último mensaje — sesión inexistente, sin
+fallback. Por eso `_effective_config()` se aplica únicamente dentro de
+`_thread_key()`; `_resolve_session` lee `session_id` solo del kwarg explícito o
+del atributo de constructor. `thread_id` no tiene ese choque: en LangGraph
+siempre significa "hilo de conversación".
+
 **Alternativa descartada** — añadir kwargs bindables `thread_id=` /
 `session_id=` (`llm.bind(thread_id=...)`). Funcionaría, pero obliga a cada
 llamante a cablearlo a mano justo cuando el dato ya está disponible, y deja las

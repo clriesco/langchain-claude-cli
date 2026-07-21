@@ -5,7 +5,7 @@
 ### Requirement: Prefix-cache de sesiones
 El modelo SHALL mantener una caché thread-safe que mapea fingerprints de prefijos de historial a `session_id` del CLI, con **backend pluggable**: `InMemoryStore` (default, comportamiento v0.1) o `FileStore` persistente en disco (JSON con file-locking y escritura atómica, poda LRU), seleccionable vía `session_store="memory"|"file"` o instancia propia. Cuando el historial entrante es igual a un prefijo conocido más un sufijo nuevo, el modelo SHALL reanudar la sesión (`resume=session_id`) enviando únicamente el sufijo. Tras cada generación SHALL registrarse el fingerprint del historial completo resultante. El fingerprint SHALL ignorar metadata volátil y ser estable entre procesos.
 
-El `RunnableConfig` de una invocación SHALL resolverse desde el kwarg explícito `config` si existe y, en su defecto, desde el config ambiental de langchain-core (`ensure_config()`), que es el único disponible cuando el modelo se invoca desde un nodo LangGraph. Cuando ese config aporta `configurable.thread_id`, el mapeo `thread_id → session_id` SHALL registrarse como vía de recuperación adicional cuando el prefijo no matchea.
+El `RunnableConfig` de una invocación SHALL resolverse desde el kwarg explícito `config` si existe y, en su defecto, desde el config ambiental de langchain-core (`ensure_config()`), que es el único disponible cuando el modelo se invoca desde un nodo LangGraph. Del config ambiental SHALL leerse **únicamente** `configurable.thread_id`: la clave `session_id` está sobrecargada en el ecosistema (`RunnableWithMessageHistory` la usa como clave de historial de chat, no como UUID de sesión del CLI) y honrarla desde el ambiente secuestraría la sesión con un valor no dirigido a este modelo. Cuando el config aporta `configurable.thread_id`, el mapeo `thread_id → session_id` SHALL registrarse como vía de recuperación adicional cuando el prefijo no matchea.
 
 La clave de ese mapeo SHALL estar namespaced por un digest de los atributos **estables** de ejecución (`model`, `cwd`, `builtin_tools`, `permission_mode`), de modo que dos instancias del modelo con perfiles distintos que compartan `thread_id` no reanuden la sesión de la otra. El digest NO SHALL incluir `system_prompt`, que los runtimes recomponen por turno y cuya inclusión impediría toda continuidad.
 
@@ -38,7 +38,7 @@ La clave de ese mapeo SHALL estar namespaced por un digest de los atributos **es
 - **THEN** la sesión se reanuda igualmente (el perfil de la clave ignora `system_prompt`) y el system prompt nuevo se aplica al turno
 
 ### Requirement: session_id explícito
-El usuario SHALL poder fijar la sesión manualmente vía `config={"configurable": {"session_id": ...}}` (prioridad sobre el prefix-cache) para reanudar sesiones existentes del CLI, replicando la capacidad de la librería antigua. Dado que `BaseChatModel.invoke/ainvoke` no propaga su parámetro `config` a `**kwargs`, esa vía SHALL resolverse por el config ambiental cuando la invocación ocurre dentro de un runnable; el atributo de constructor `session_id` SHALL seguir siendo la vía válida fuera de un runnable.
+El usuario SHALL poder fijar la sesión manualmente vía `config={"configurable": {"session_id": ...}}` (prioridad sobre el prefix-cache) para reanudar sesiones existentes del CLI, replicando la capacidad de la librería antigua. Esa vía SHALL resolverse únicamente desde el kwarg explícito `config` o desde el atributo de constructor `session_id` — NO SHALL resolverse desde el config ambiental, cuyo `session_id` puede pertenecer a otro componente (p. ej. `RunnableWithMessageHistory`).
 
 #### Scenario: Resume manual
 - **WHEN** se invoca con `config={"configurable": {"session_id": "<uuid-existente>"}}`
@@ -47,3 +47,7 @@ El usuario SHALL poder fijar la sesión manualmente vía `config={"configurable"
 #### Scenario: Resume manual por constructor
 - **WHEN** se construye el modelo con `session_id="<uuid-existente>"` y se invoca fuera de cualquier runnable
 - **THEN** la generación se ejecuta con `resume=<uuid>` enviando solo el último mensaje como sufijo
+
+#### Scenario: Un session_id ambiental ajeno no secuestra la sesión
+- **WHEN** el modelo se invoca desde dentro de un runnable cuyo config ambiental contiene `configurable.session_id` (p. ej. la clave de historial de `RunnableWithMessageHistory`) junto a un `thread_id`
+- **THEN** ese `session_id` se ignora, la resolución no fuerza `resume` sobre él, y el `thread_id` sí se resuelve con normalidad

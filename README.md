@@ -146,7 +146,7 @@ agent = create_agent(
 
 - A conversation that grows by appending (chatbots, agent loops, tool cycles) **resumes its CLI session** and sends only the new messages — full fidelity, and the CLI's automatic prompt caching keeps input tokens cheap.
 - An arbitrary history with no known prefix (e.g. trimmed or hand-built) is **flattened into a single user message** — role-labelled text, with image/document blocks preserved. A `ClaudeCliCompatWarning` tells you when this happens.
-- You can pin a CLI session explicitly: `llm.invoke(..., config={"configurable": {"session_id": "<uuid>"}})`.
+- You can pin a CLI session explicitly with the constructor: `ChatClaudeCli(session_id="<uuid>")` — resumes that session, sending only the last message. (An ambient `configurable.session_id` is deliberately ignored: `RunnableWithMessageHistory` uses that same key as a chat-history key, not a CLI session UUID.)
 
 ## Agentic mode (opt-in)
 

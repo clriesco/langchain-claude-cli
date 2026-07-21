@@ -8,10 +8,14 @@
 ## 2. Resolución de config ambiental (D1)
 
 - [x] 2.1 Helper `_effective_config(config)` → `config or ensure_config()`
-- [x] 2.2 `_runner.py`: usarlo en `_resolve_session` y en `_thread_key`
+- [x] 2.2 `_runner.py`: usarlo únicamente en `_thread_key`; `_resolve_session`
+      lee `session_id` solo del kwarg explícito o del constructor
 - [x] 2.3 `_streaming.py`: hereda el arreglo vía `_thread_key` (los dos puntos de
       llamada pasan por él; no hizo falta tocar la resolución allí)
 - [x] 2.4 Test unitario: el kwarg explícito gana al ambiental
+- [x] 2.5 Del config ambiental NO se lee `session_id` (colisión con la clave de
+      historial de `RunnableWithMessageHistory`) — test de no-secuestro en grafo
+      real (review post-PR)
 
 ## 3. Namespacing de la clave de thread (D2)
 

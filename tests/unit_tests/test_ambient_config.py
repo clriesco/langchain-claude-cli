@@ -9,7 +9,6 @@ way LangGraph invokes it.
 
 from typing import Any
 
-import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import END, START, StateGraph
 
@@ -151,9 +150,41 @@ def test_explicit_session_id_beats_thread_recovery():
     assert [m.content for m in res.suffix] == ["b"]
 
 
-@pytest.mark.parametrize("key", ["session_id"])
-def test_configurable_session_id_from_ambient_config(key):
+def test_session_id_from_explicit_kwarg_config():
     llm = _model()
-    cfg = {"configurable": {key: "from-config"}}
+    cfg = {"configurable": {"session_id": "from-config"}}
     res = llm._resolve_session([HumanMessage(content="a")], cfg)
     assert res.session_id == "from-config"
+
+
+# ── ambient session_id must NOT hijack the session ───────────
+
+
+def test_ambient_session_id_does_not_hijack_session():
+    """`session_id` is an overloaded key: RunnableWithMessageHistory's default
+    field spec uses it as a chat-history key. An ambient one must be ignored —
+    honoring it would mean `resume=<foreign key>` against a session that does
+    not exist. Only `thread_id` may be read from the ambient config.
+    """
+    llm = _model()
+    seen: list[Any] = []
+
+    def node(state: dict) -> dict:
+        seen.append(llm._resolve_session([HumanMessage(content="hi")], None))
+        seen.append(llm._thread_key(None))
+        return {}
+
+    g = StateGraph(dict)
+    g.add_node("n", node)
+    g.add_edge(START, "n")
+    g.add_edge("n", END)
+    g.compile().invoke(
+        {},
+        config={"configurable": {"session_id": "user-123", "thread_id": "TID-42"}},
+    )
+
+    res, thread_key = seen
+    assert res.session_id != "user-123", "ambient session_id hijacked the session"
+    assert res.strategy != "resume"
+    assert thread_key is not None
+    assert thread_key.endswith(":TID-42")

@@ -62,6 +62,13 @@ def _effective_config(config: RunnableConfig | None) -> RunnableConfig:
     ``ensure_config()`` reads langchain-core's contextvar, which LangGraph
     populates while running a node — the one place a `thread_id` is actually
     available. Explicit kwarg still wins when present.
+
+    Only ``thread_id`` may be read from the ambient config (via
+    ``_thread_key``). ``session_id`` must NOT: the key is overloaded in the
+    LangChain ecosystem (``RunnableWithMessageHistory``'s default field spec is
+    literally ``session_id``, meaning a chat-history key, not a CLI session
+    UUID), so honoring an ambient one would hijack the session with a value
+    that was never addressed to this model.
     """
     if config:
         return config
@@ -160,8 +167,10 @@ class _RunnerMixin:
         messages: list[BaseMessage],
         config: RunnableConfig | None,
     ) -> Resolution:
-        config = _effective_config(config)
-        configurable = config.get("configurable") or {}
+        # session_id only from the explicit kwarg (internal callers) or the
+        # constructor — never from the ambient config, where the same key name
+        # means "chat-history key" to RunnableWithMessageHistory and friends.
+        configurable = (config or {}).get("configurable") or {}
         explicit = configurable.get("session_id") or self.session_id
         if explicit:
             # Caller manages history: send only the last message as suffix.

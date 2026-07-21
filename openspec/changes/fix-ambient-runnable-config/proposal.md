@@ -51,7 +51,10 @@ justo lo que el *Scenario: Instancia compartida entre conversaciones* prohíbe.
 - **Resolución de config ambiental**: el config efectivo pasa a ser
   `kwargs.get("config")` **o**, en su defecto, `ensure_config()` (contextvar de
   langchain-core). El kwarg explícito mantiene prioridad; los llamantes
-  existentes no cambian.
+  existentes no cambian. Del config ambiental se lee **únicamente**
+  `thread_id`: `session_id` está sobrecargado en el ecosistema
+  (`RunnableWithMessageHistory` lo usa como clave de historial) y honrarlo
+  desde el ambiente secuestraría la sesión con un valor ajeno.
 - **Namespacing de la clave de thread**: `thread:<id>` pasa a
   `thread:<perfil>:<id>`, donde `<perfil>` es un digest de los atributos
   **estables** de ejecución (`model`, `cwd`, `builtin_tools`,
