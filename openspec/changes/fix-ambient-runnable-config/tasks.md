@@ -47,4 +47,4 @@
 ## 6. Entrega
 
 - [x] 6.1 Rama `fix/ambient-runnable-config` + push
-- [ ] 6.2 Decidir publicación a PyPI de 0.4.2
+- [x] 6.2 Publicado 0.4.2 a PyPI (tag v0.4.2, workflow Release verde)
