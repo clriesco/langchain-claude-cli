@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.3 — 2026-07-21
+
+### Fixed
+- **A purged CLI session no longer bricks its conversation.** The session store maps history fingerprints and thread keys to CLI `session_id`s, and with `session_store="file"` those mappings outlive the transcripts themselves — the CLI prunes inactive sessions after `cleanupPeriodDays` (~30 days). Resuming a purged session made the CLI exit 1 (`No conversation found with session ID`), the bridge retried the doomed resume until the budget ran out, surfaced `ProcessError`, and — worst of all — left the poisoned mapping in the store, so **every** subsequent turn of that conversation failed the same way until the file was deleted by hand. Now the failure is detected on the first attempt (before retry accounting, same spirit as the 0.4.1 contradictory-result handling), every store entry resolving to the purged session is invalidated, and the invoke transparently re-runs as a new session via the existing full-history flatten path — with its retry budget intact. The new session is registered as usual, so the next turn resumes it. Covers both invoke and streaming; a pooled (persistent) client hitting a purged session already fell back to the stateless path, where the new detection applies.
+- An explicitly pinned session (`ChatClaudeCli(session_id=...)`) deliberately does **not** degrade: the caller asked for that exact session, and silently swapping in an empty one would drop context without warning. The error propagates — now immediately, without burning retries on a resume that can only fail.
+
+### Changed
+- Runs that resume a session now register the SDK's `stderr` callback (bounded capture, re-emitted at DEBUG on the `langchain_claude_cli` logger). The purge marker is only observable there: the SDK's `ProcessError` carries the placeholder "Check stderr output for details" instead of the real stderr. Side effect: on those runs the CLI's stderr no longer passes through to the parent process's stderr.
+
 ## 0.4.2 — 2026-07-21
 
 ### Fixed

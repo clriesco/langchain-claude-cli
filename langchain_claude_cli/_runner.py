@@ -10,7 +10,8 @@ import asyncio
 import contextlib
 import logging
 import threading
-from collections.abc import AsyncIterator
+from collections import deque
+from collections.abc import AsyncIterator, Callable, Iterable
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 
@@ -94,6 +95,47 @@ def _is_contradictory_success(result: Any, text: str) -> bool:
     return text.rstrip().endswith("returned an error result: success")
 
 
+_STALE_SESSION_MARKER = "No conversation found with session ID"
+
+
+def _stderr_collector(buffer: deque[str]) -> Callable[[str], None]:
+    """SDK ``options.stderr`` callback: bounded capture, re-emitted at DEBUG.
+
+    The purge marker is only observable on the CLI's stderr — the SDK's
+    ProcessError carries the literal "Check stderr output for details" instead
+    of the actual text, so without this callback the failure is opaque.
+    """
+
+    def _collect(line: str) -> None:
+        buffer.append(line)
+        logger.debug("cli stderr: %s", line)
+
+    return _collect
+
+
+def _is_stale_session_error(exc: BaseException, stderr_lines: Iterable[str]) -> bool:
+    """Detect a resume that failed because the CLI purged the session.
+
+    Checks the exception text and its ``stderr`` attribute too, in case a
+    future SDK starts propagating the real stderr; today only the collected
+    lines carry the marker.
+    """
+    if _STALE_SESSION_MARKER in str(exc):
+        return True
+    if _STALE_SESSION_MARKER in str(getattr(exc, "stderr", "") or ""):
+        return True
+    return any(_STALE_SESSION_MARKER in line for line in stderr_lines)
+
+
+def _log_stale_degrade(session_id: str, removed: int) -> None:
+    logger.info(
+        "session %s… no longer exists in the CLI (transcript purged); "
+        "invalidated %d store mapping(s), re-running as a new session",
+        session_id[:8],
+        removed,
+    )
+
+
 def _run_sync(coro: Any) -> Any:
     """Run a coroutine from sync context, surviving an already-running loop."""
     try:
@@ -175,7 +217,10 @@ class _RunnerMixin:
         if explicit:
             # Caller manages history: send only the last message as suffix.
             return Resolution(
-                strategy="resume", session_id=explicit, suffix=messages[-1:]
+                strategy="resume",
+                session_id=explicit,
+                suffix=messages[-1:],
+                explicit=True,
             )
         return self._session_cache.resolve(messages, thread_id=self._thread_key(config))
 
@@ -279,222 +324,281 @@ class _RunnerMixin:
             ) from e
 
         tool_schemas = kwargs.get("tools") or []
-        resolution = self._resolve_session(messages, kwargs.get("config"))
-        converted = convert_lc_messages(resolution.suffix, self._file_resolver)
-        # Delivery = ONLY the suffix's pending ToolMessages (older results were
-        # already consumed in-session; new same-args calls must defer, not get
-        # stale results). Names/args come from AIMessages in the full history.
-        pending_ids = {
-            m.tool_call_id for m in resolution.suffix if isinstance(m, ToolMessage)
-        }
-        delivery = convert_lc_messages(messages).restrict_results(pending_ids)
-        entries = self._build_prompt_entries(resolution, converted)
-        if not entries and not delivery.tool_results:
-            # Nothing would drive the CLI turn (e.g. exact-duplicate history):
-            # degrade to a fresh flattened run instead of hanging on stdin.
-            resolution = Resolution(strategy="new", suffix=list(messages))
-            converted = convert_lc_messages(messages)
-            entries = self._build_prompt_entries(resolution, converted)
-
-        run_token = kwargs.pop("_run_token", None)
-        if run_token is not None:
-            run_token.session_id = resolution.session_id
-
-        logger.debug(
-            "session: %s%s, suffix=%d msgs, pending_tools=%d",
-            resolution.strategy,
-            f" ({resolution.session_id[:8]}…)" if resolution.session_id else "",
-            len(resolution.suffix),
-            len(delivery.tool_results),
-        )
-
         tool_choice = kwargs.get("tool_choice")
-        system = converted.system
-        if tool_choice not in (None, "auto") and not (
-            isinstance(tool_choice, dict) and tool_choice.get("type") == "auto"
-        ):
-            name = (
-                tool_choice.get("name")
-                if isinstance(tool_choice, dict)
-                else (None if tool_choice == "any" else tool_choice)
+        run_token = kwargs.pop("_run_token", None)
+        resolution = self._resolve_session(messages, kwargs.get("config"))
+
+        # Session rounds: at most one restart, when the resumed session turns
+        # out to be purged from the CLI (stale mapping). Round 2 runs as a new
+        # session, which cannot degrade again — the loop always terminates.
+        while True:
+            converted = convert_lc_messages(resolution.suffix, self._file_resolver)
+            # Delivery = ONLY the suffix's pending ToolMessages (older results
+            # were already consumed in-session; new same-args calls must defer,
+            # not get stale results). Names/args come from the full history.
+            pending_ids = {
+                m.tool_call_id for m in resolution.suffix if isinstance(m, ToolMessage)
+            }
+            delivery = convert_lc_messages(messages).restrict_results(pending_ids)
+            entries = self._build_prompt_entries(resolution, converted)
+            if not entries and not delivery.tool_results:
+                # Nothing would drive the CLI turn (e.g. exact-duplicate
+                # history): degrade to a fresh flattened run instead of
+                # hanging on stdin.
+                resolution = Resolution(strategy="new", suffix=list(messages))
+                converted = convert_lc_messages(messages)
+                entries = self._build_prompt_entries(resolution, converted)
+
+            if run_token is not None:
+                run_token.session_id = resolution.session_id
+
+            logger.debug(
+                "session: %s%s, suffix=%d msgs, pending_tools=%d",
+                resolution.strategy,
+                f" ({resolution.session_id[:8]}…)" if resolution.session_id else "",
+                len(resolution.suffix),
+                len(delivery.tool_results),
             )
-            instruction = (
-                f"You MUST call the tool `{name}` to answer."
-                if name
-                else "You MUST call at least one of the provided tools to answer."
-            )
-            system = f"{system}\n\n{instruction}" if system else instruction
 
-        # Persistent fast path (D4): plain conversation turn on a live client.
-        if (
-            self._pool is not None
-            and resolution.strategy == "resume"
-            and resolution.session_id
-            and not tool_schemas
-            and not delivery.tool_results
-            and not kwargs.get("output_format")
-            and entries
-        ):
-            pooled = await self._pool.run_turn(
-                resolution.session_id, self._options_sig(), entries
-            )
-            if pooled is not None:
-                pooled_msgs, pooled_result, pooled_rate = pooled
-                return pooled_msgs, pooled_result, delivery, resolution, pooled_rate
-
-        options = self._build_options(
-            system=system,
-            resume=resolution.session_id,
-            tool_schemas=tool_schemas,
-            delivery=delivery,
-            server_builtin_tools=kwargs.get("server_builtin_tools"),
-            output_format=kwargs.get("output_format"),
-        )
-
-        async def _stream_entries() -> AsyncIterator[dict]:
-            for entry in entries:
-                yield entry
-
-        attempts = max(1, self.max_retries + 1)
-        last_error: Exception | None = None
-        for attempt in range(attempts):
-            collected: dict[str, Any] = {"result": None, "msgs": [], "rate_limit": None}
-            inactivity = self._effective_inactivity()
-
-            async def _collect2() -> None:
-                stream = query(prompt=_stream_entries(), options=options)
-                iterator = stream.__aiter__()
-                try:
-                    while True:
-                        try:
-                            if inactivity is not None:
-                                msg = await asyncio.wait_for(
-                                    iterator.__anext__(), timeout=inactivity
-                                )
-                            else:
-                                msg = await iterator.__anext__()
-                        except StopAsyncIteration:
-                            break
-                        except (
-                            TimeoutError,
-                            asyncio.TimeoutError,
-                        ):  # 3.10: distinct classes
-                            logger.warning(
-                                "watchdog: no SDK activity for %.0fs, aborting run",
-                                inactivity,
-                            )
-                            raise ClaudeCliTimeoutError(
-                                f"no SDK activity for {inactivity}s "
-                                "(inactivity_timeout; the CLI process may have "
-                                "died — see README reliability notes)"
-                            ) from None
-                        if isinstance(msg, AssistantMessage):
-                            collected["msgs"].append(msg)
-                        elif isinstance(msg, ResultMessage):
-                            collected["result"] = msg
-                        elif isinstance(msg, RateLimitEvent):
-                            collected["rate_limit"] = rate_limit_to_meta(msg)
-                finally:
-                    # Close INSIDE the still-running loop: on timeout/cancel,
-                    # skipping this leaves an orphaned `claude` subprocess
-                    # (the SDK's cleanup tasks die with the loop) that keeps
-                    # consuming quota and contends with the next run.
-                    with contextlib.suppress(Exception):
-                        await asyncio.wait_for(cast(Any, stream).aclose(), timeout=5)
-
-            try:
-                if self.default_request_timeout:
-                    await asyncio.wait_for(
-                        _collect2(), timeout=self.default_request_timeout
-                    )
-                else:
-                    await _collect2()
-            except ClaudeCliTimeoutError:
-                raise  # inactivity watchdog: already typed and logged
-            except (TimeoutError, asyncio.TimeoutError) as e:  # 3.10: distinct classes
-                raise ClaudeCliTimeoutError(
-                    f"run exceeded timeout={self.default_request_timeout}s"
-                ) from e
-            except Exception as e:
-                text = str(e)
-                if "maximum budget" in text.lower():
-                    # Deliberate, user-set limit — terminal, never retried.
-                    raise ClaudeCliBudgetExceededError(text) from e
-                if "returned an error result" in text:
-                    err_result = collected["result"]
-                    if _is_contradictory_success(err_result, text):
-                        # The CLI labelled the outcome "success" yet flagged
-                        # is_error (intermittent, account-level — see the bug
-                        # spec). Never surface this as a fatal untyped Exception.
-                        if collected["msgs"]:
-                            # Option A: the turn's assistant messages were
-                            # already collected before the trailing error
-                            # sentinel — recover them as the success the CLI
-                            # reported. Return directly: falling through to the
-                            # post-collection block below would re-raise on
-                            # is_error (a "success" result has no HTTP status).
-                            return (
-                                collected["msgs"],
-                                err_result,
-                                delivery,
-                                resolution,
-                                collected["rate_limit"],
-                            )
-                        # Option B: nothing to recover — raise a typed,
-                        # retryable error so the retry/fallback policy owns it,
-                        # instead of a fatal untyped throw.
-                        raise ClaudeCliOverloadedError(
-                            "contradictory CLI result "
-                            "(is_error=true, subtype=success) with no assistant "
-                            "messages; treating as transient"
-                        ) from e
-                    # Genuine CLI error result (error_max_turns,
-                    # error_during_execution, ...): not a transport failure —
-                    # retrying would just repeat the same failing run.
-                    raise
-                last_error = e  # transport/process error: retry
-                if attempt + 1 < attempts:
-                    logger.info(
-                        "transport error (%s), retry %d/%d",
-                        type(e).__name__,
-                        attempt + 1,
-                        attempts - 1,
-                    )
-                    await asyncio.sleep(min(2**attempt, 8))
-                    continue
-                raise
-
-            result: Any = collected["result"]
-            status = getattr(result, "api_error_status", None) if result else None
-            detail = str(
-                (getattr(result, "result", None) or getattr(result, "errors", None))
-                if result
-                else ""
-            )
-            if result is not None and result.is_error and status in _RETRYABLE_STATUS:
-                last_error = classify_status(status, detail or f"status {status}")
-                if attempt + 1 < attempts:
-                    await asyncio.sleep(min(2**attempt, 8))
-                    continue
-                # No attempts left: raise, never return the error result as a
-                # normal (empty) completion (reported downstream: silent empty
-                # AIMessage with max_retries=0 on a single 429/529).
-                raise last_error
-            if (
-                result is not None
-                and result.is_error
-                and status not in _RETRYABLE_STATUS
+            system = converted.system
+            if tool_choice not in (None, "auto") and not (
+                isinstance(tool_choice, dict) and tool_choice.get("type") == "auto"
             ):
-                raise classify_status(status, detail or str(result.subtype))
-            return (
-                collected["msgs"],
-                result,
-                delivery,
-                resolution,
-                collected["rate_limit"],
-            )
+                name = (
+                    tool_choice.get("name")
+                    if isinstance(tool_choice, dict)
+                    else (None if tool_choice == "any" else tool_choice)
+                )
+                instruction = (
+                    f"You MUST call the tool `{name}` to answer."
+                    if name
+                    else "You MUST call at least one of the provided tools to answer."
+                )
+                system = f"{system}\n\n{instruction}" if system else instruction
 
-        raise last_error or ClaudeCliError("Claude CLI run failed")
+            # Persistent fast path (D4): plain conversation turn on a live
+            # client. On any client failure the pool evicts and returns None,
+            # falling through to the stateless path below — where a purged
+            # session is detected and degraded like any other resume.
+            if (
+                self._pool is not None
+                and resolution.strategy == "resume"
+                and resolution.session_id
+                and not tool_schemas
+                and not delivery.tool_results
+                and not kwargs.get("output_format")
+                and entries
+            ):
+                pooled = await self._pool.run_turn(
+                    resolution.session_id, self._options_sig(), entries
+                )
+                if pooled is not None:
+                    pooled_msgs, pooled_result, pooled_rate = pooled
+                    return (
+                        pooled_msgs,
+                        pooled_result,
+                        delivery,
+                        resolution,
+                        pooled_rate,
+                    )
+
+            options = self._build_options(
+                system=system,
+                resume=resolution.session_id,
+                tool_schemas=tool_schemas,
+                delivery=delivery,
+                server_builtin_tools=kwargs.get("server_builtin_tools"),
+                output_format=kwargs.get("output_format"),
+            )
+            stale_stderr: deque[str] = deque(maxlen=50)
+            if resolution.strategy == "resume" and resolution.session_id:
+                # The purge marker only shows on the CLI's stderr (the SDK's
+                # ProcessError carries a placeholder) — capture it.
+                options.stderr = _stderr_collector(stale_stderr)
+
+            entries_this_round = entries
+
+            async def _stream_entries(
+                entries: list[dict] = entries_this_round,
+            ) -> AsyncIterator[dict]:
+                for entry in entries:
+                    yield entry
+
+            degraded = False
+            attempts = max(1, self.max_retries + 1)
+            last_error: Exception | None = None
+            for attempt in range(attempts):
+                collected: dict[str, Any] = {
+                    "result": None,
+                    "msgs": [],
+                    "rate_limit": None,
+                }
+                inactivity = self._effective_inactivity()
+
+                async def _collect2() -> None:
+                    stream = query(prompt=_stream_entries(), options=options)
+                    iterator = stream.__aiter__()
+                    try:
+                        while True:
+                            try:
+                                if inactivity is not None:
+                                    msg = await asyncio.wait_for(
+                                        iterator.__anext__(), timeout=inactivity
+                                    )
+                                else:
+                                    msg = await iterator.__anext__()
+                            except StopAsyncIteration:
+                                break
+                            except (
+                                TimeoutError,
+                                asyncio.TimeoutError,
+                            ):  # 3.10: distinct classes
+                                logger.warning(
+                                    "watchdog: no SDK activity for %.0fs, aborting run",
+                                    inactivity,
+                                )
+                                raise ClaudeCliTimeoutError(
+                                    f"no SDK activity for {inactivity}s "
+                                    "(inactivity_timeout; the CLI process may have "
+                                    "died — see README reliability notes)"
+                                ) from None
+                            if isinstance(msg, AssistantMessage):
+                                collected["msgs"].append(msg)
+                            elif isinstance(msg, ResultMessage):
+                                collected["result"] = msg
+                            elif isinstance(msg, RateLimitEvent):
+                                collected["rate_limit"] = rate_limit_to_meta(msg)
+                    finally:
+                        # Close INSIDE the still-running loop: on timeout/cancel,
+                        # skipping this leaves an orphaned `claude` subprocess
+                        # (the SDK's cleanup tasks die with the loop) that keeps
+                        # consuming quota and contends with the next run.
+                        with contextlib.suppress(Exception):
+                            await asyncio.wait_for(
+                                cast(Any, stream).aclose(), timeout=5
+                            )
+
+                try:
+                    if self.default_request_timeout:
+                        await asyncio.wait_for(
+                            _collect2(), timeout=self.default_request_timeout
+                        )
+                    else:
+                        await _collect2()
+                except ClaudeCliTimeoutError:
+                    raise  # inactivity watchdog: already typed and logged
+                except (
+                    TimeoutError,
+                    asyncio.TimeoutError,
+                ) as e:  # 3.10: distinct classes
+                    raise ClaudeCliTimeoutError(
+                        f"run exceeded timeout={self.default_request_timeout}s"
+                    ) from e
+                except Exception as e:
+                    text = str(e)
+                    if (
+                        resolution.strategy == "resume"
+                        and resolution.session_id
+                        and _is_stale_session_error(e, stale_stderr)
+                    ):
+                        # The CLI purged this session's transcript: resuming it
+                        # again can only fail. Classify BEFORE the retry
+                        # accounting (same spirit as _is_contradictory_success)
+                        # so doomed resumes never burn the retry budget.
+                        if resolution.explicit:
+                            # Caller pinned this exact session (constructor or
+                            # config kwarg): silently swapping in an empty new
+                            # session would drop context — propagate, fast.
+                            raise
+                        removed = self._session_cache.invalidate(resolution.session_id)
+                        _log_stale_degrade(resolution.session_id, removed)
+                        resolution = Resolution(strategy="new", suffix=list(messages))
+                        degraded = True
+                        break
+                    if "maximum budget" in text.lower():
+                        # Deliberate, user-set limit — terminal, never retried.
+                        raise ClaudeCliBudgetExceededError(text) from e
+                    if "returned an error result" in text:
+                        err_result = collected["result"]
+                        if _is_contradictory_success(err_result, text):
+                            # The CLI labelled the outcome "success" yet flagged
+                            # is_error (intermittent, account-level — see the bug
+                            # spec). Never surface this as a fatal untyped Exception.
+                            if collected["msgs"]:
+                                # Option A: the turn's assistant messages were
+                                # already collected before the trailing error
+                                # sentinel — recover them as the success the CLI
+                                # reported. Return directly: falling through to the
+                                # post-collection block below would re-raise on
+                                # is_error (a "success" result has no HTTP status).
+                                return (
+                                    collected["msgs"],
+                                    err_result,
+                                    delivery,
+                                    resolution,
+                                    collected["rate_limit"],
+                                )
+                            # Option B: nothing to recover — raise a typed,
+                            # retryable error so the retry/fallback policy owns it,
+                            # instead of a fatal untyped throw.
+                            raise ClaudeCliOverloadedError(
+                                "contradictory CLI result "
+                                "(is_error=true, subtype=success) with no assistant "
+                                "messages; treating as transient"
+                            ) from e
+                        # Genuine CLI error result (error_max_turns,
+                        # error_during_execution, ...): not a transport failure —
+                        # retrying would just repeat the same failing run.
+                        raise
+                    last_error = e  # transport/process error: retry
+                    if attempt + 1 < attempts:
+                        logger.info(
+                            "transport error (%s), retry %d/%d",
+                            type(e).__name__,
+                            attempt + 1,
+                            attempts - 1,
+                        )
+                        await asyncio.sleep(min(2**attempt, 8))
+                        continue
+                    raise
+
+                result: Any = collected["result"]
+                status = getattr(result, "api_error_status", None) if result else None
+                detail = str(
+                    (getattr(result, "result", None) or getattr(result, "errors", None))
+                    if result
+                    else ""
+                )
+                if (
+                    result is not None
+                    and result.is_error
+                    and status in _RETRYABLE_STATUS
+                ):
+                    last_error = classify_status(status, detail or f"status {status}")
+                    if attempt + 1 < attempts:
+                        await asyncio.sleep(min(2**attempt, 8))
+                        continue
+                    # No attempts left: raise, never return the error result as a
+                    # normal (empty) completion (reported downstream: silent empty
+                    # AIMessage with max_retries=0 on a single 429/529).
+                    raise last_error
+                if (
+                    result is not None
+                    and result.is_error
+                    and status not in _RETRYABLE_STATUS
+                ):
+                    raise classify_status(status, detail or str(result.subtype))
+                return (
+                    collected["msgs"],
+                    result,
+                    delivery,
+                    resolution,
+                    collected["rate_limit"],
+                )
+
+            if degraded:
+                continue  # re-run as a new session, full retry budget intact
+            raise last_error or ClaudeCliError("Claude CLI run failed")
 
     def _build_chat_result(
         self: ChatClaudeCli,
