@@ -95,6 +95,27 @@ class _OptionsMixin:
             default=str,
         )
 
+    def _session_profile(self: ChatClaudeCli) -> str:
+        """Digest of the STABLE execution profile, for session-key namespacing.
+
+        A LangGraph `thread_id` identifies a graph thread, not a conversation:
+        several model instances routinely share one (e.g. a cheap router and an
+        expensive executor). Namespacing the thread key by profile keeps them
+        from resuming each other's CLI session.
+
+        Deliberately narrower than `_options_sig()`: `system_prompt` is excluded
+        because runtimes recompose it every turn (date, memory, active skills).
+        Including it would make the key volatile and disable recovery entirely.
+        """
+        import hashlib
+        import json
+
+        raw = json.dumps(
+            [self.model, self.cwd, self.builtin_tools, self.permission_mode],
+            default=str,
+        )
+        return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
     def _translate_mcp_servers(self: ChatClaudeCli) -> dict[str, Any]:
         """ChatAnthropic API-connector list OR CLI-style dict -> CLI dict."""
         if not self.mcp_servers:

@@ -21,6 +21,7 @@ from langchain_core.callbacks import (
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables.config import ensure_config
 
 from langchain_claude_cli._compat import warn_once
 from langchain_claude_cli._convert import (
@@ -48,6 +49,23 @@ if TYPE_CHECKING:
 logger = logging.getLogger("langchain_claude_cli")
 
 _RETRYABLE_STATUS = {408, 429, 500, 502, 503, 504, 529}
+
+
+def _effective_config(config: RunnableConfig | None) -> RunnableConfig:
+    """Resolve the RunnableConfig for this call: explicit kwarg, else ambient.
+
+    ``BaseChatModel.invoke/ainvoke`` take ``config`` as their own parameter and
+    decompose it into callbacks/tags/metadata — it never reaches ``**kwargs``,
+    and ``bind(config=...)`` collides with the positional parameter. So the
+    kwarg path alone can only ever be fed by internal callers.
+
+    ``ensure_config()`` reads langchain-core's contextvar, which LangGraph
+    populates while running a node — the one place a `thread_id` is actually
+    available. Explicit kwarg still wins when present.
+    """
+    if config:
+        return config
+    return ensure_config()
 
 
 def _is_contradictory_success(result: Any, text: str) -> bool:
@@ -142,25 +160,27 @@ class _RunnerMixin:
         messages: list[BaseMessage],
         config: RunnableConfig | None,
     ) -> Resolution:
-        explicit = None
-        thread_id = None
-        if config:
-            configurable = config.get("configurable") or {}
-            explicit = configurable.get("session_id")
-            thread_id = configurable.get("thread_id")
-        explicit = explicit or self.session_id
+        config = _effective_config(config)
+        configurable = config.get("configurable") or {}
+        explicit = configurable.get("session_id") or self.session_id
         if explicit:
             # Caller manages history: send only the last message as suffix.
             return Resolution(
                 strategy="resume", session_id=explicit, suffix=messages[-1:]
             )
-        return self._session_cache.resolve(messages, thread_id=thread_id)
+        return self._session_cache.resolve(messages, thread_id=self._thread_key(config))
 
-    @staticmethod
-    def _thread_id(config: RunnableConfig | None) -> str | None:
-        if not config:
+    def _thread_key(self: ChatClaudeCli, config: RunnableConfig | None) -> str | None:
+        """Namespaced recovery key: ``<stable profile digest>:<thread_id>``.
+
+        Returns None when no thread_id is reachable, leaving the prefix
+        fingerprint as the only resolution path.
+        """
+        config = _effective_config(config)
+        thread_id = (config.get("configurable") or {}).get("thread_id")
+        if not thread_id:
             return None
-        return (config.get("configurable") or {}).get("thread_id")
+        return f"{self._session_profile()}:{thread_id}"
 
     def _build_prompt_entries(
         self: ChatClaudeCli, resolution: Resolution, converted: ConvertedHistory
@@ -522,7 +542,7 @@ class _RunnerMixin:
             self._session_cache.register(
                 [*messages, ai_msg],
                 session_id,
-                thread_id=self._thread_id(kwargs.get("config")),
+                thread_id=self._thread_key(kwargs.get("config")),
             )
             if self._pool is not None and not kwargs.get("tools") and not deferred:
                 # Warm a live client for the next turn (fire-and-forget).

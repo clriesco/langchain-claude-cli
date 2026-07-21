@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.2 — 2026-07-21
+
+### Fixed
+- **Session recovery by `thread_id` never ran.** The recovery path (and the `config={"configurable": {"session_id": ...}}` override) read `kwargs["config"]`, but `BaseChatModel.invoke/ainvoke` consume `config` as their own parameter and never forward it to `**kwargs` — and `bind(config=...)` raises `TypeError` on the positional collision. The config is now resolved from the explicit kwarg **or**, failing that, langchain-core's ambient config (`ensure_config()`), which LangGraph populates while running a node. Practical effect: a conversation inside a LangGraph node whose checkpointer normalizes `AIMessage` content (breaking the prefix fingerprint) now resumes its CLI session instead of degrading to flatten on every turn. `SessionCache` itself was already correct — its unit tests called it directly, so the missing wiring went unnoticed.
+
+### Changed
+- **Thread recovery keys are namespaced by execution profile.** A LangGraph `thread_id` identifies a graph thread, not a conversation: several model instances routinely share one (e.g. a cheap router and an expensive executor). The `thread:` key now carries a digest of `model`, `cwd`, `builtin_tools` and `permission_mode`, so they cannot resume each other's session. The digest deliberately excludes `system_prompt` — runtimes recompose it every turn (date, memory, active skills) and including it would make the key volatile and disable recovery entirely. Pre-upgrade `thread:` entries are simply not found, which degrades to the previous behavior; no migration needed.
+
+### Note
+- Turns that must NOT resume (heartbeats, crons, one-shot jobs) opt out without new API: `session_store="memory"` is per-instance, so building a fresh model per turn never resumes.
+
 ## 0.4.1 — 2026-07-13
 
 ### Fixed

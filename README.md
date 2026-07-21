@@ -110,7 +110,7 @@ Uses the CLI's native `output_format` (JSON-schema enforced by the model runtime
 
 ## What's new in 0.2
 
-- **Persistent sessions** — `session_store="file"`: conversations survive process restarts (the prefix-cache lives in `~/.langchain-claude-cli/`); LangGraph `thread_id` is used as a recovery path when checkpointers trim history.
+- **Persistent sessions** — `session_store="file"`: conversations survive process restarts (the prefix-cache lives in `~/.langchain-claude-cli/`); LangGraph `thread_id` is used as a recovery path when checkpointers trim or normalize history. Inside a graph node the `thread_id` is read from the ambient config — nothing to wire (0.4.2). Recovery keys are namespaced by execution profile, so a cheap router and an expensive executor sharing one thread never resume each other's session. Turns that must *not* resume (heartbeats, crons, one-shot jobs) opt out by keeping the default `session_store="memory"` and building a fresh model per turn.
 - **Persistent client** — `persistent=True`: a live CLI client per conversation (~2× faster reused turns), plus `set_session_model()` for hot model swaps.
 - **`interrupt()`** (0.4): cancel active runs in ANY mode — persistent conversations via the CLI protocol, stateless invokes via task cancellation (the cancelled invoke raises `ClaudeCliInterruptedError`; the subprocess is cleaned up).
 - **Typed errors** — `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError`, `ClaudeCliBudgetExceededError`: build retry/fallback policies without parsing error text. Tip: set `max_retries=0` if your own fallback layer should see raw errors.
