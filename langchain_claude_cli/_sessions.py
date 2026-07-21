@@ -188,6 +188,9 @@ class Resolution:
     session_id: str | None = None
     # messages not covered by the resumed session (empty on full-history match)
     suffix: list[BaseMessage] = field(default_factory=list)
+    # session_id pinned by the caller (constructor / config kwarg): a purged
+    # session must surface the error instead of silently degrading to new
+    explicit: bool = False
 
 
 _FP = "fp:"
@@ -237,6 +240,33 @@ class SessionCache:
                     tkey, {"session_id": session_id, "count": len(messages)}
                 )
                 self._touch(tkey)
+
+    def invalidate(self, session_id: str) -> int:
+        """Drop every entry (``fp:`` and ``thread:``) resolving to `session_id`.
+
+        Needed when the CLI has purged the session's transcript
+        (`cleanupPeriodDays`): one purged session may hang off several
+        fingerprints (growing prefixes of the same conversation) plus a thread
+        key, and any survivor would keep steering resumes into the void.
+        Returns the number of entries removed.
+        """
+        if not session_id:
+            return 0
+        with self._lock:
+            doomed = [
+                key
+                for key in self._store.keys()  # noqa: SIM118 (protocol, not dict)
+                if key != _ORDER
+                and (self._store.get(key) or {}).get("session_id") == session_id
+            ]
+            for key in doomed:
+                self._store.delete(key)
+            if doomed:
+                order = (self._store.get(_ORDER) or {}).get("keys", [])
+                kept = [k for k in order if k not in set(doomed)]
+                if len(kept) != len(order):
+                    self._store.set(_ORDER, {"keys": kept})
+        return len(doomed)
 
     def resolve(
         self, messages: list[BaseMessage], thread_id: str | None = None
