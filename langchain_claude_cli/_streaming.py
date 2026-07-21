@@ -289,7 +289,7 @@ class _StreamingMixin:
                         AIMessage(content=cast(Any, content), tool_calls=tool_calls),
                     ],
                     session_id,
-                    thread_id=self._thread_id(kwargs.get("config")),
+                    thread_id=self._thread_key(kwargs.get("config")),
                 )
 
     def _stream(
