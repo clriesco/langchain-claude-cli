@@ -46,4 +46,4 @@
 ## 6. Entrega
 
 - [x] 6.1 Rama `fix/stale-session-resume` + push + PR contra `main`
-- [ ] 6.2 Publicación a PyPI (decide el dueño tras revisar el PR)
+- [x] 6.2 Publicado 0.4.3 a PyPI (tag v0.4.3, workflow Release verde)
