@@ -76,9 +76,7 @@ def test_profile_differs_by_model_and_cwd(tmp_path):
     assert _model(model="haiku")._session_profile() != (
         _model(model="sonnet")._session_profile()
     )
-    assert _model(cwd=str(tmp_path))._session_profile() != (
-        _model()._session_profile()
-    )
+    assert _model(cwd=str(tmp_path))._session_profile() != (_model()._session_profile())
 
 
 def test_profile_ignores_system_prompt():
@@ -128,7 +126,11 @@ def test_same_profile_recovers_across_system_prompt_changes(tmp_path):
         session_store=store,
     )
     res = turn2._resolve_session(
-        [HumanMessage(content="q"), AIMessage(content="CLEANED"), HumanMessage(content="q2")],
+        [
+            HumanMessage(content="q"),
+            AIMessage(content="CLEANED"),
+            HumanMessage(content="q2"),
+        ],
         CFG,
     )
     assert res.strategy == "resume"
@@ -141,7 +143,9 @@ def test_same_profile_recovers_across_system_prompt_changes(tmp_path):
 
 def test_explicit_session_id_beats_thread_recovery():
     llm = _model(session_id="forced")
-    res = llm._resolve_session([HumanMessage(content="a"), HumanMessage(content="b")], CFG)
+    res = llm._resolve_session(
+        [HumanMessage(content="a"), HumanMessage(content="b")], CFG
+    )
     assert res.strategy == "resume"
     assert res.session_id == "forced"
     assert [m.content for m in res.suffix] == ["b"]
