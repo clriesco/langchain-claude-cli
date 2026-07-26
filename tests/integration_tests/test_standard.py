@@ -67,3 +67,19 @@ class TestChatClaudeCliStandard(ChatModelIntegrationTests):
     )
     def test_logprobs(self, *args, **kwargs):
         super().test_logprobs(*args, **kwargs)
+
+    @pytest.mark.xfail(
+        reason="few-shot examples are fed via tool_choice='any', which the CLI "
+        "cannot force; the run raises instead of silently answering (level B)",
+        strict=False,
+    )
+    def test_structured_few_shot_examples(self, *args, **kwargs):
+        super().test_structured_few_shot_examples(*args, **kwargs)
+
+    @pytest.mark.xfail(
+        reason="an errored ToolMessage needs a third CLI turn to recover, and "
+        "pure-LLM mode caps max_turns at 2 by design; raise max_turns to opt in",
+        strict=False,
+    )
+    def test_tool_message_error_status(self, *args, **kwargs):
+        super().test_tool_message_error_status(*args, **kwargs)

@@ -177,15 +177,34 @@ class ChatClaudeCli(_OptionsMixin, _RunnerMixin, _StreamingMixin, BaseChatModel)
         session_id, ALL active runs of the instance are cancelled.
         """
         interrupted = False
+        # Sessions left mid-generation by the cancellation (see below).
+        poisoned: set[str] = set()
         if self._pool is not None and self._pool.has(session_id):
+            target = self._pool.resolve_target(session_id)
             self._pool.interrupt(session_id)
+            if target:
+                poisoned.add(target)
+                # The client's stream still holds the abandoned turn's tail.
+                self._pool.evict(target)
             interrupted = True
         for token in list(self._active_runs.values()):
             if session_id and token.session_id and token.session_id != session_id:
                 continue
             token.interrupted = True
             token.loop.call_soon_threadsafe(token.task.cancel)
+            if token.session_id:
+                poisoned.add(token.session_id)
             interrupted = True
+        if session_id:
+            poisoned.add(session_id)
+        # An interrupted turn leaves the CLI session with an unfinished
+        # assistant reply. Resuming it makes the CLI continue that reply
+        # instead of answering the next message, which silently hijacks the
+        # rest of the conversation. Drop the mappings so the following turn
+        # opens a fresh session from the caller's history — the same degrade
+        # path a purged session takes (0.4.3).
+        for sid in poisoned:
+            self._session_cache.invalidate(sid)
         if not interrupted:
             raise ClaudeCliError("interrupt(): no active run to cancel")
 
@@ -302,30 +321,47 @@ class ChatClaudeCli(_OptionsMixin, _RunnerMixin, _StreamingMixin, BaseChatModel)
     ) -> Runnable[LanguageModelInput, dict | BaseModel]:
         """Structured output via the CLI's native output_format (json_schema)."""
         from langchain_core.runnables import RunnableLambda
+        from langchain_core.utils.pydantic import is_basemodel_subclass
 
-        pydantic_schema: type[BaseModel] | None = (
+        # ChatAnthropic parity: pydantic v1 models are accepted too. They are
+        # not subclasses of the v2 BaseModel, so a plain issubclass() check
+        # silently demotes them to the dict path and returns a raw dict where
+        # the caller asked for an instance.
+        pydantic_schema: Any = (
             schema
-            if isinstance(schema, type) and issubclass(schema, BaseModel)
+            if isinstance(schema, type) and is_basemodel_subclass(schema)
             else None
         )
         if pydantic_schema is not None:
-            json_schema = pydantic_schema.model_json_schema()
-            name = pydantic_schema.__name__
+            json_schema = (
+                pydantic_schema.model_json_schema()
+                if hasattr(pydantic_schema, "model_json_schema")
+                else pydantic_schema.schema()  # pydantic v1
+            )
         else:
             anthropic = _lc_tool_to_anthropic(schema)
             json_schema = anthropic.get("input_schema", anthropic)
-            name = anthropic.get("name", "output")
 
         if method == "function_calling":
             # Same native mechanism; kept for signature compatibility. The CLI's
             # output_format is strictly better than emulating a forced tool call.
             pass
 
+        # Tracing metadata takes the canonical JSON schema, NOT a {name, schema}
+        # wrapper: langchain-core re-runs convert_to_json_schema over whatever
+        # is passed, and a wrapper collapses to just {"title": <name>}.
+        try:
+            from langchain_core.utils.function_calling import convert_to_json_schema
+
+            ls_schema = convert_to_json_schema(schema)
+        except Exception:  # older langchain-core, or an unconvertible schema
+            ls_schema = json_schema
+
         bound = self.bind(
             output_format={"type": "json_schema", "schema": json_schema},
             ls_structured_output_format={
                 "kwargs": {"method": method},
-                "schema": {"name": name, "schema": json_schema},
+                "schema": ls_schema,
             },
         )
 
@@ -346,11 +382,12 @@ class ChatClaudeCli(_OptionsMixin, _RunnerMixin, _StreamingMixin, BaseChatModel)
                         )
                     )
                     raw_obj = json.loads(text)
-                parsed = (
-                    pydantic_schema.model_validate(raw_obj)
-                    if pydantic_schema is not None
-                    else raw_obj
-                )
+                if pydantic_schema is None:
+                    parsed = raw_obj
+                elif hasattr(pydantic_schema, "model_validate"):
+                    parsed = pydantic_schema.model_validate(raw_obj)
+                else:  # pydantic v1
+                    parsed = pydantic_schema.parse_obj(raw_obj)
             except Exception as e:
                 err = e
             if include_raw:

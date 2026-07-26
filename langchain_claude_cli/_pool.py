@@ -156,12 +156,16 @@ class ClientPool:
         self._submit(_connect())
 
     def has(self, session_id: str | None) -> bool:
-        target = session_id or self._last_session
+        target = self.resolve_target(session_id)
         return bool(target) and target in self._entries
+
+    def resolve_target(self, session_id: str | None) -> str | None:
+        """The session an untargeted operation applies to (default: last used)."""
+        return session_id or self._last_session
 
     def interrupt(self, session_id: str | None = None) -> None:
         """Cancel the active run of a pooled session (default: last active)."""
-        target = session_id or self._last_session
+        target = self.resolve_target(session_id)
         if not target:
             return
         with self._lock:

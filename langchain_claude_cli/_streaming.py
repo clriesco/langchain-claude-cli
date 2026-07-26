@@ -318,9 +318,21 @@ class _StreamingMixin:
                     if self.stream_usage
                     else None
                 )
+                # structured_output rides the final chunk, mirroring the
+                # invoke path (_runner.py): without it with_structured_output()
+                # has nothing to parse when streaming and falls back to reading
+                # text that a structured run never produces.
+                structured = getattr(final_result, "structured_output", None)
                 yield ChatGenerationChunk(
                     message=AIMessageChunk(
-                        content="", usage_metadata=usage, response_metadata=meta
+                        content="",
+                        usage_metadata=usage,
+                        response_metadata=meta,
+                        additional_kwargs=(
+                            {}
+                            if structured is None
+                            else {"structured_output": structured}
+                        ),
                     )
                 )
                 session_id = getattr(final_result, "session_id", None)

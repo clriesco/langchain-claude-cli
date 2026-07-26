@@ -94,3 +94,67 @@ def test_interrupt_with_no_active_run_raises():
     llm = ChatClaudeCli()
     with pytest.raises(ClaudeCliError, match="no active run"):
         llm.interrupt()
+
+
+# ── 1.0.0: an interrupted session must not be resumed ────────
+
+SESSION = "22222222-2222-2222-2222-222222222222"
+
+
+class _FakeLoop:
+    def call_soon_threadsafe(self, fn, *args):
+        fn(*args)
+
+
+class _FakeTask:
+    def __init__(self):
+        self.cancelled = False
+
+    def cancel(self):
+        self.cancelled = True
+
+
+def _active_token(llm: ChatClaudeCli, session_id: str | None):
+    from types import SimpleNamespace
+
+    token = SimpleNamespace(
+        loop=_FakeLoop(), task=_FakeTask(), session_id=session_id, interrupted=False
+    )
+    llm._active_runs[id(token)] = token
+    return token
+
+
+def test_interrupt_invalidates_the_interrupted_session():
+    """Resuming a session cancelled mid-generation replays the abandoned
+    answer instead of the next message, hijacking the conversation."""
+    from langchain_core.messages import AIMessage, HumanMessage
+
+    history = [HumanMessage(content="hola"), AIMessage(content="¡hola!")]
+    llm = ChatClaudeCli(model="haiku")
+    llm._session_cache.register(history, SESSION)
+    assert llm._session_cache.resolve(history).session_id == SESSION
+
+    token = _active_token(llm, SESSION)
+    llm.interrupt()
+
+    assert token.interrupted and token.task.cancelled
+    # Next turn opens a fresh session from the caller's history.
+    assert llm._session_cache.resolve(history).strategy == "new"
+
+
+def test_interrupt_leaves_other_conversations_alone():
+    from langchain_core.messages import AIMessage, HumanMessage
+
+    mine = [HumanMessage(content="a"), AIMessage(content="b")]
+    other = [HumanMessage(content="x"), AIMessage(content="y")]
+    other_session = "33333333-3333-3333-3333-333333333333"
+
+    llm = ChatClaudeCli(model="haiku")
+    llm._session_cache.register(mine, SESSION)
+    llm._session_cache.register(other, other_session)
+
+    _active_token(llm, SESSION)
+    llm.interrupt(session_id=SESSION)
+
+    assert llm._session_cache.resolve(mine).strategy == "new"
+    assert llm._session_cache.resolve(other).session_id == other_session

@@ -52,6 +52,28 @@ FileResolver = Callable[[str], dict | None]
 """file_id -> materialized base64 content block, or None if unavailable."""
 
 
+def _resolve_file_id(file_id: str, file_resolver: FileResolver | None) -> dict | None:
+    """Materialize a Files API block, or drop it with a one-shot warning.
+
+    A file_id belongs to an API account and cannot resolve under the CLI's
+    OAuth session (spike S7), so it has to be downloaded and inlined.
+    """
+    resolved = file_resolver(file_id) if file_resolver else None
+    if resolved is None:
+        from langchain_claude_cli._compat import warn_once
+
+        warn_once(
+            "files_api",
+            "A Files API block (file_id) could not be materialized — "
+            "the CLI's OAuth session cannot access API file storage. "
+            "Provide ANTHROPIC_API_KEY (used ONLY to download the file, "
+            "never passed to the CLI) or inline the content as base64. "
+            "The block was omitted.",
+        )
+        return None
+    return resolved
+
+
 def _human_item_to_block(
     item: str | dict, file_resolver: FileResolver | None = None
 ) -> dict | None:
@@ -80,27 +102,27 @@ def _human_item_to_block(
             }
         return {"type": "image", "source": {"type": "url", "url": url}}
     if kind in ("image", "document"):
-        source = item.get("source", {})
+        source = item.get("source")
         if isinstance(source, dict) and source.get("type") == "file":
-            # Files API block: a file_id belongs to an API account and cannot
-            # resolve under the CLI's OAuth session (spike S7) — materialize
-            # via the resolver (Anthropic API) or drop with a warning.
-            resolved = (
-                file_resolver(source.get("file_id", "")) if file_resolver else None
-            )
-            if resolved is None:
-                from langchain_claude_cli._compat import warn_once
-
-                warn_once(
-                    "files_api",
-                    "A Files API block (file_id) could not be materialized — "
-                    "the CLI's OAuth session cannot access API file storage. "
-                    "Provide ANTHROPIC_API_KEY (used ONLY to download the file, "
-                    "never passed to the CLI) or inline the content as base64. "
-                    "The block was omitted.",
-                )
-                return None
-            return resolved
+            return _resolve_file_id(source.get("file_id", ""), file_resolver)
+        if source is None and kind == "image":
+            # langchain-core v1 ImageContentBlock carries the payload on the
+            # item itself instead of a nested `source`. Passed through as-is it
+            # reaches the CLI without a source and kills it ("undefined is not
+            # an object (evaluating 'e.source.type')"), so normalize it here.
+            if "file_id" in item:
+                return _resolve_file_id(item["file_id"], file_resolver)
+            if b64 := item.get("base64"):
+                return {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": item.get("mime_type") or "image/png",
+                        "data": b64,
+                    },
+                }
+            if url := item.get("url"):
+                return {"type": "image", "source": {"type": "url", "url": url}}
         return {k: v for k, v in item.items() if k != "cache_control"}
     if (
         kind == "file"  # langchain-core v1 standard file block

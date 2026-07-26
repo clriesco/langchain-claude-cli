@@ -94,6 +94,48 @@ def test_image_base64_and_url():
     }
 
 
+def test_v1_standard_image_blocks_get_a_source():
+    """langchain-core v1 ImageContentBlock: payload on the item, no `source`.
+
+    Without normalization the block reaches the CLI sourceless and kills it
+    ("undefined is not an object (evaluating 'e.source.type')").
+    """
+    msg = HumanMessage(
+        content=[
+            {"type": "image", "base64": "AAA=", "mime_type": "image/jpeg"},
+            {"type": "image", "url": "https://x.test/a.jpg"},
+        ]
+    )
+    blocks = convert_lc_messages([msg]).entries[0]["message"]["content"]
+    assert blocks[0] == {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/jpeg", "data": "AAA="},
+    }
+    assert blocks[1] == {
+        "type": "image",
+        "source": {"type": "url", "url": "https://x.test/a.jpg"},
+    }
+    assert all("source" in b for b in blocks)
+
+
+def test_v1_image_without_mime_type_still_has_a_media_type():
+    msg = HumanMessage(content=[{"type": "image", "base64": "AAA="}])
+    block = convert_lc_messages([msg]).entries[0]["message"]["content"][0]
+    assert block["source"]["media_type"] == "image/png"
+
+
+def test_anthropic_native_image_block_is_untouched():
+    """The nested-source form must keep passing through verbatim."""
+    native = {
+        "type": "image",
+        "source": {"type": "base64", "media_type": "image/gif", "data": "B"},
+    }
+    block = convert_lc_messages([HumanMessage(content=[native])]).entries[0]["message"][
+        "content"
+    ][0]
+    assert block == native
+
+
 def test_cache_control_is_stripped():
     msg = HumanMessage(
         content=[
