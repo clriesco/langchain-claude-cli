@@ -1,5 +1,9 @@
 # chat-model-core
 
+## Purpose
+Definir el contrato de `ChatClaudeCli` como `BaseChatModel` de langchain-core y su paridad con `ChatAnthropic`, ejecutando cada generación contra el CLI `claude` sin API key.
+
+## Requirements
 
 ### Requirement: Contrato BaseChatModel completo
 `ChatClaudeCli` SHALL implementar `BaseChatModel` de langchain-core 1.x soportando `invoke`, `ainvoke`, `stream`, `astream` y `batch`/`abatch`, ejecutando cada generación vía `claude_agent_sdk.query()` contra el CLI `claude` sin requerir API key.

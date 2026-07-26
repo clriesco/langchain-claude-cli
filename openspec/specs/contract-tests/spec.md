@@ -1,5 +1,9 @@
 # contract-tests
 
+## Purpose
+Fijar los invariantes de comportamiento del CLI de los que depende el diseño, para que un cambio aguas arriba se detecte aquí y no en producción.
+
+## Requirements
 
 ### Requirement: Suite de contrato CLI↔librería
 El repositorio SHALL incluir `tests/contract_tests/` con los invariantes de comportamiento del CLI de los que depende la librería, derivados de los spikes: defer round-trip con re-disparo en resume, tool calls paralelas diferidas, replay de mensajes assistant, document blocks, formas del streaming (`text_delta`/`thinking_delta`/`input_json_delta`), niveles de `effort`, emisión de `RateLimitEvent`, y neutralización de `ANTHROPIC_API_KEY` por override vacío. Cada test SHALL nombrar el invariante y la decisión de diseño que lo consume.

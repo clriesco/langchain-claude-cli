@@ -1,5 +1,9 @@
 # agent-middleware
 
+## Purpose
+Exponer las capacidades agénticas de Claude Code como una tool de LangChain, para que cualquier agente —lo orqueste el modelo que lo orqueste— pueda delegar trabajo de sistema de ficheros y shell.
+
+## Requirements
 
 ### Requirement: ClaudeCodeToolsMiddleware para create_agent
 El paquete SHALL exponer `langchain_claude_cli.middleware.ClaudeCodeToolsMiddleware`, un `AgentMiddleware` de LangChain 1.x que registra una tool (nombre default `claude_code`) en el agente. Su handler SHALL ejecutar la tarea recibida como run agéntico de Claude Code con la configuración del middleware (`builtin_tools`, `cwd`, `permission_mode`, `sandbox`, `max_budget_usd`, `model`) y devolver el resultado final como string. El middleware SHALL funcionar con cualquier chat model orquestador, no solo `ChatClaudeCli`.

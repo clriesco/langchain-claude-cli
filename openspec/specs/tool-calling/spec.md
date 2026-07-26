@@ -1,5 +1,9 @@
 # tool-calling
 
+## Purpose
+Definir el tool calling con el patrón clásico de LangChain: el modelo devuelve `tool_calls` y es el llamante quien ejecuta, nunca el CLI.
+
+## Requirements
 
 ### Requirement: bind_tools con patrón LangChain clásico
 `bind_tools(tools)` SHALL aceptar `BaseTool`, dicts (formato Anthropic u OpenAI), clases Pydantic y callables. Las tools SHALL registrarse como servidor MCP in-process con hook `PreToolUse` que devuelve `permissionDecision: "defer"`, de modo que cuando el modelo decide llamar una tool el run se detiene SIN ejecutarla y el `deferred_tool_use` resultante se mapea a `AIMessage.tool_calls` (con el nombre des-namespaceado, sin prefijo `mcp__`).

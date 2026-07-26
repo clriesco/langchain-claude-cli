@@ -1,5 +1,9 @@
 # persistent-client
 
+## Purpose
+Definir el pool de clientes vivos que evita reiniciar el subproceso en cada turno reutilizado, y las operaciones que solo son posibles sobre una sesión viva.
+
+## Requirements
 
 ### Requirement: Modo cliente persistente opt-in
 Con `ChatClaudeCli(persistent=True)`, el modelo SHALL mantener un pool thread-safe de `ClaudeSDKClient` keyed por `session_id` (tamaño y TTL configurables, defaults 4 clientes / 300s). Un invoke cuya resolución es `resume` con cliente vivo SHALL reutilizarlo (sin arrancar subproceso); en cualquier otro caso SHALL seguir el camino v0.1 y registrar el cliente al terminar. Con `persistent=False` (default) el comportamiento SHALL ser idéntico a v0.1.

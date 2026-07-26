@@ -1,5 +1,9 @@
 # structured-output
 
+## Purpose
+Definir `with_structured_output` sobre el `output_format` nativo del CLI, con el esquema impuesto por el runtime del modelo en vez de por instrucciones en el prompt.
+
+## Requirements
 
 ### Requirement: with_structured_output sobre output_format nativo
 `with_structured_output(schema)` SHALL aceptar clases Pydantic, TypedDicts, JSON Schema y schemas de tool Anthropic/OpenAI. Con `method="json_schema"` (default) SHALL pasar el schema al SDK vía `options.output_format` y construir el resultado desde `ResultMessage.structured_output`. Si el schema es una clase Pydantic, el resultado SHALL ser una instancia validada; en otro caso, un dict.

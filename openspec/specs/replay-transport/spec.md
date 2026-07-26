@@ -1,5 +1,9 @@
 # replay-transport
 
+## Purpose
+Definir el harness de cassettes que permite ejecutar la suite principal sin CLI, sin red y sin consumir cuota de suscripción.
+
+## Requirements
 
 ### Requirement: Reproducción determinista de streams grabados
 El repositorio SHALL proveer un harness de cassettes: una fixture pytest que intercepta `claude_agent_sdk.query` y reproduce, por cada llamada, el siguiente intercambio grabado de `tests/cassettes/<nombre>.json`, reconstruyendo los tipos reales del SDK (`AssistantMessage`, `ResultMessage`, `StreamEvent`, `RateLimitEvent`). Los tests con cassette SHALL ejecutarse sin CLI, sin red y sin consumir cuota.

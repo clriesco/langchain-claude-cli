@@ -1,5 +1,9 @@
 # streaming
 
+## Purpose
+Definir la traducción de los eventos crudos del SDK a `AIMessageChunk`, para que el streaming sea token a token real y no un troceado a posteriori.
+
+## Requirements
 
 ### Requirement: Streaming token a token real
 `stream` y `astream` SHALL activar `include_partial_messages=True` y traducir los `StreamEvent` del SDK (eventos raw de la API Anthropic) a `AIMessageChunk`: deltas de texto como contenido incremental, deltas de thinking como content blocks `thinking`, y `content_block_start`/`input_json_delta` de tool_use como `tool_call_chunks`. El streaming sync SHALL funcionar fuera y dentro de un event loop existente (patrón thread+queue).

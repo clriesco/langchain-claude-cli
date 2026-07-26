@@ -1,5 +1,9 @@
 # agentic-mode
 
+## Purpose
+Definir cómo se activan y se acotan las herramientas propias del CLI (ficheros, shell, red). Están desactivadas por defecto para que el modo por defecto tenga el mismo perfil de riesgo que una llamada a la API.
+
+## Requirements
 
 ### Requirement: Activación opt-in del modo agéntico
 El modo agéntico SHALL activarse explícitamente vía parámetros dedicados: `builtin_tools` (lista de nombres o preset `"claude_code"`), `max_turns > 1`, `permission_mode`, `cwd`, `add_dirs`, `max_budget_usd` y `sandbox`. Sin estos parámetros el modelo SHALL permanecer en modo LLM puro (`tools=[]`).
