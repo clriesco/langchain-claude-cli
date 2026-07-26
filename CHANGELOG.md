@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.0.0 — 2026-07-26
+
+First stable release. The public surface has been stable across the 0.4.x line
+and is now committed to under semantic versioning.
+
+### Added
+- **`SessionStoreBackend`, `InMemoryStore` and `FileStore` are public.**
+  `session_store` has always accepted a custom backend instance, but the
+  protocol it had to satisfy lived in the private `_sessions` module — an API
+  you could use but not import. Implementing a Redis-backed store, or pointing
+  `FileStore` at a path other than the default, no longer reaches into a
+  private module. The protocol itself is unchanged (`get`/`set`/`keys`/
+  `delete`); only its visibility is.
+
+### Fixed
+- **An interrupted turn hijacked the rest of its conversation.** `interrupt()`
+  cancels the run, but the CLI session is left holding an unfinished assistant
+  reply — and resuming it makes the CLI continue *that* reply instead of
+  answering the next message. Interrupting a long generation and then asking
+  something else returned the tail of the abandoned answer, on every subsequent
+  turn. `interrupt()` now invalidates the affected session mappings (and evicts
+  the pooled client, whose stream holds the same tail), so the next turn opens
+  a fresh session from the caller's history — the degrade path a purged session
+  already took. Behavior change worth knowing: after an interrupt a
+  conversation no longer resumes its CLI session, so that turn re-sends its
+  history and loses the session's prompt cache.
+- **pydantic v1 schemas returned raw dicts.** `with_structured_output()` tested
+  `issubclass(schema, BaseModel)` against the pydantic **v2** base, so a v1
+  model silently took the dict path and the caller got a `dict` where it asked
+  for an instance. Detection now goes through langchain-core's
+  `is_basemodel_subclass`, with `schema()`/`parse_obj()` on the v1 side —
+  ChatAnthropic parity restored.
+- **Streaming dropped structured output.** `with_structured_output()` reads
+  `additional_kwargs["structured_output"]`, which the invoke path sets from the
+  `ResultMessage` but the streaming path never attached. The parser then fell
+  back to reading text — and a structured run emits none (its content is
+  thinking + tool_use) — so `.stream()` died with
+  `JSONDecodeError: Expecting value: line 1 column 1 (char 0)`. The final chunk
+  now carries it, at parity with invoke.
+- **langchain-core v1 image blocks killed the CLI.** The v1 `ImageContentBlock`
+  carries its payload on the item (`base64` + `mime_type`, `url` or `file_id`)
+  rather than in a nested `source`, and was forwarded unchanged — reaching the
+  CLI sourceless and crashing it with `undefined is not an object (evaluating
+  'e.source.type')`. All three v1 forms are now normalized to Anthropic image
+  blocks. The v1 `file` block for PDFs was already handled; images had been
+  missed.
+- **`ls_structured_output_format` reported the wrong schema.** The tracing
+  metadata carried a `{name, schema}` wrapper, but langchain-core re-runs
+  `convert_to_json_schema` over the value, collapsing that wrapper to just
+  `{"title": <name>}` — so LangSmith saw a schema with no properties. It now
+  carries the canonical JSON schema. The schema sent to the CLI is unchanged.
+
+### Changed
+- `Development Status` classifier promoted to `5 - Production/Stable`.
+- README rewritten: task-oriented structure, a full options reference, and a
+  headless-deployment section covering `claude setup-token` /
+  `CLAUDE_CODE_OAUTH_TOKEN`. Release notes live here, not in the README.
+
 ## 0.4.3 — 2026-07-21
 
 ### Fixed

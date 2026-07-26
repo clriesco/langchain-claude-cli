@@ -3,6 +3,11 @@
 import logging as _logging
 
 from langchain_claude_cli._compat import ClaudeCliCompatWarning
+from langchain_claude_cli._sessions import (
+    FileStore,
+    InMemoryStore,
+    SessionStoreBackend,
+)
 from langchain_claude_cli.chat_models import ChatClaudeCli
 from langchain_claude_cli.exceptions import (
     ClaudeCliAuthError,
@@ -40,4 +45,7 @@ __all__ = [
     "ClaudeCliRateLimitError",
     "ClaudeCliTimeoutError",
     "ClaudeTool",
+    "FileStore",
+    "InMemoryStore",
+    "SessionStoreBackend",
 ]

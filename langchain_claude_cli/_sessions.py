@@ -73,7 +73,24 @@ def prefix_fingerprints(messages: list[BaseMessage]) -> list[str]:
 
 
 class SessionStoreBackend(Protocol):
-    """Minimal persistence protocol for the cache (D1). Values are JSON-safe."""
+    """Persistence protocol for the session prefix-cache (D1). Public API.
+
+    Implement it to back the cache with your own storage (Redis, a database,
+    a shared filesystem) and pass the instance as ``session_store``. Four
+    methods, no lifecycle hooks:
+
+    - ``get`` returns the stored mapping, or None when the key is unknown.
+    - ``set`` overwrites unconditionally.
+    - ``keys`` lists every key currently stored, including the reserved
+      ``__order__`` bookkeeping entry.
+    - ``delete`` is a no-op on a missing key.
+
+    Values are small JSON-safe dicts (``{"session_id": ...}``, plus a
+    ``count`` on thread entries) and keys are opaque strings — no message
+    content is ever handed to a backend, only SHA-256 prefix fingerprints.
+    ``SessionCache`` serializes its own calls, so a backend only needs
+    internal locking when the same store is shared across processes.
+    """
 
     def get(self, key: str) -> dict | None: ...
 

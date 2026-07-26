@@ -1,4 +1,4 @@
-"""Unit tests for v0.2 session persistence: FileStore, thread_id, replay mode."""
+"""Unit tests for v0.2 session persistence: store backends, FileStore, thread_id."""
 
 import json
 import threading
@@ -26,6 +26,55 @@ def test_make_store_variants(tmp_path):
     assert isinstance(make_store("file"), FileStore)
     custom = InMemoryStore()
     assert make_store(custom) is custom
+
+
+def test_store_backends_are_public_api():
+    """1.0.0: custom backends must not require importing a private module."""
+    import langchain_claude_cli as pkg
+
+    for name in ("SessionStoreBackend", "InMemoryStore", "FileStore"):
+        assert name in pkg.__all__
+        assert getattr(pkg, name) is not None
+
+
+def test_custom_backend_drives_the_cache():
+    """The four-method protocol is all a third-party store has to implement."""
+    from langchain_claude_cli import SessionStoreBackend
+
+    class DictStore(SessionStoreBackend):
+        def __init__(self):
+            self.data: dict[str, dict] = {}
+
+        def get(self, key):
+            return self.data.get(key)
+
+        def set(self, key, value):
+            self.data[key] = value
+
+        def keys(self):
+            return list(self.data)
+
+        def delete(self, key):
+            self.data.pop(key, None)
+
+    backend = DictStore()
+    cache = SessionCache(store=backend)
+    convo = _conv(1)
+    cache.register(convo, "sess-1")
+
+    # Round-trips through the custom backend, suffix included.
+    grown = [*convo, HumanMessage(content="q1")]
+    res = cache.resolve(grown)
+    assert res.strategy == "resume"
+    assert res.session_id == "sess-1"
+    assert [m.content for m in res.suffix] == ["q1"]
+
+    # Only digests and ids ever reach a backend — no message content.
+    blob = json.dumps(backend.data)
+    assert "q0" not in blob and "r0" not in blob
+
+    assert cache.invalidate("sess-1") == 1
+    assert cache.resolve(grown).strategy == "new"
 
 
 def test_filestore_roundtrip_and_atomicity(tmp_path):

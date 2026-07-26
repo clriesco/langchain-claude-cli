@@ -2,70 +2,47 @@
 
 **Drop-in replacement for `ChatAnthropic`** that runs on the Claude Code CLI — use your Claude Pro/Max subscription, **no API key needed**.
 
-Built on the official [`claude-agent-sdk`](https://pypi.org/project/claude-agent-sdk/) (≥ 0.2.115). Real tool calling via in-process MCP, native structured output, native extended thinking, real token usage — no prompt-injection hacks.
+Built on Anthropic's official [`claude-agent-sdk`](https://pypi.org/project/claude-agent-sdk/): real tool calling through an in-process MCP server, native structured output, native extended thinking, real token accounting. No prompt-injection hacks.
 
 ```bash
 pip install langchain-claude-cli
 ```
 
-## Quick Start
+## Requirements
+
+- **Claude Code CLI**, installed and authenticated — `npm install -g @anthropic-ai/claude-code`, then run `claude` and log in
+- **Claude Pro or Max subscription**
+- Python ≥ 3.10, Node.js ≥ 18
+
+No API key, and no configuration: the library reuses the login the CLI already has. On a server, where nobody can log in interactively, see [Headless deployment](#headless-deployment).
+
+## Quick start
 
 ```python
 from langchain_claude_cli import ChatClaudeCli
 
-# Just like ChatAnthropic, but no API key
 llm = ChatClaudeCli(model="claude-sonnet-4-5")
+
 response = llm.invoke("What is the capital of France?")
 print(response.content)
-print(response.usage_metadata)   # real token usage, including cache tokens
+print(response.usage_metadata)      # real token counts, cache reads included
 ```
 
-### Prerequisites
+`invoke`, `ainvoke`, `stream`, `astream` and `batch` all work, with genuine token-by-token streaming.
 
-- **Claude Code CLI** installed and authenticated: `npm install -g @anthropic-ai/claude-code`, then `claude` → log in
-- **Claude Pro or Max subscription**
-- Python ≥ 3.10, Node.js ≥ 18
+## What you get
 
-## Feature parity with ChatAnthropic
+- **Real tool calling** via `bind_tools` — the model returns `tool_calls`, your code executes them
+- **Structured output** enforced by the CLI's native JSON-schema mode, not by asking nicely
+- **Extended thinking** and the five `effort` levels, passed straight through
+- **Session continuity** — multi-turn conversations resume the underlying CLI session instead of resending history
+- **Agentic mode** (opt-in) — filesystem, shell and web tools, with budget caps and sandboxing
+- **Typed errors** and configurable retries, so you can build real fallback policies
+- **LangGraph compatible** — `create_agent` / `create_react_agent` work end to end
 
-Every `ChatAnthropic` constructor parameter is accepted — nothing breaks on migration. Parity comes in three levels:
+## Tool calling
 
-### 🟢 Level A — Native
-
-| Feature | Notes |
-|---|---|
-| `invoke` / `ainvoke` / `stream` / `astream` / `batch` | Real token-by-token streaming |
-| Tool calling (`bind_tools`) | **Classic LangChain pattern**: model returns `AIMessage.tool_calls` without executing. Parallel tool calls supported |
-| `with_structured_output` | CLI-native JSON-schema enforcement (`output_format`) |
-| Extended thinking | Same config dict as ChatAnthropic: `thinking={"type": "enabled", "budget_tokens": N}` — plus `{"type": "adaptive"}` |
-| `effort` | All five levels (`max/xhigh/high/medium/low`), passthrough |
-| Token usage | `usage_metadata` incl. `cache_read`/`cache_creation` details, plus `total_cost_usd` in `response_metadata` |
-| `stop_reason` | In `response_metadata`, like ChatAnthropic |
-| Images (base64 + URL) | |
-| PDFs (`document` blocks) | |
-| System messages | |
-| MCP servers | Both ChatAnthropic API-connector format and CLI-native (stdio/SSE/HTTP) |
-| Server tools `web_search` / `web_fetch` | Mapped to the CLI's built-in WebSearch/WebFetch |
-| `max_retries` / `timeout` | Client-side retry on 429/5xx; plus `fallback_model` |
-| LangGraph agents | `create_agent` / `create_react_agent` work end-to-end |
-
-### 🟡 Level B — Client-side workaround
-
-| Feature | How |
-|---|---|
-| `stop_sequences` | Output scanned client-side; stream is cut and truncated at the sequence |
-| `max_tokens` | Client-side truncation (~4 chars/token) with synthetic `stop_reason="max_tokens"` |
-| `tool_choice="any"` / specific tool | System-prompt instruction + validation + one retry; explicit error if not satisfied |
-| `get_num_tokens_from_messages` | Heuristic estimate (no count-tokens endpoint without an API key) |
-| Arbitrary message histories | See [How conversations work](#how-conversations-work) below |
-
-### 🔴 Level C — Accepted no-op (warns once)
-
-`temperature`, `top_k`, `top_p`, `anthropic_api_url`, `anthropic_proxy`, `default_headers`, `inference_geo`, `context_management`, `cache_control` blocks (the CLI caches automatically — you still get cache token counts), citations, computer use, `strict` tool use.
-
-## Tool calling — the classic LangChain pattern
-
-Tools are registered as an in-process MCP server; a `PreToolUse` hook defers execution back to you. The model **never executes your tools** — it returns `tool_calls`, your code (or your LangGraph) executes them:
+Tools are registered as an in-process MCP server, and a `PreToolUse` hook defers execution back to you. The model **never runs your tools** — it returns `tool_calls` and your code (or your graph) decides what happens:
 
 ```python
 from langchain_core.tools import tool
@@ -75,15 +52,14 @@ def get_weather(city: str) -> str:
     """Get the current weather for a city."""
     return f"25°C, sunny in {city}"
 
-llm = ChatClaudeCli(model="claude-sonnet-4-5")
-llm_with_tools = llm.bind_tools([get_weather])
+llm_with_tools = ChatClaudeCli(model="claude-sonnet-4-5").bind_tools([get_weather])
 
 response = llm_with_tools.invoke("What's the weather in Tokyo?")
 response.tool_calls
 # [{'name': 'get_weather', 'args': {'city': 'Tokyo'}, 'id': 'toolu_...'}]
 ```
 
-Works out of the box with LangGraph:
+Parallel tool calls are supported. With LangGraph, nothing special is needed:
 
 ```python
 from langgraph.prebuilt import create_react_agent
@@ -106,114 +82,259 @@ structured.invoke("What is the capital of France?")
 # Answer(answer='Paris', confidence=0.99)
 ```
 
-Uses the CLI's native `output_format` (JSON-schema enforced by the model runtime, not by prompt begging). `include_raw=True` and dict/TypedDict schemas are supported.
+Pydantic models (v1 and v2), plain dicts and `TypedDict` schemas are accepted, as is `include_raw=True`. Streaming works too — the parsed object arrives as the last chunk.
 
-## What's new in 0.2
+## Conversations and sessions
 
-- **Persistent sessions** — `session_store="file"`: conversations survive process restarts (the prefix-cache lives in `~/.langchain-claude-cli/`); LangGraph `thread_id` is used as a recovery path when checkpointers trim or normalize history. Inside a graph node the `thread_id` is read from the ambient config — nothing to wire (0.4.2). Recovery keys are namespaced by execution profile, so a cheap router and an expensive executor sharing one thread never resume each other's session. Turns that must *not* resume (heartbeats, crons, one-shot jobs) opt out by keeping the default `session_store="memory"` and building a fresh model per turn.
-- **Persistent client** — `persistent=True`: a live CLI client per conversation (~2× faster reused turns), plus `set_session_model()` for hot model swaps.
-- **`interrupt()`** (0.4): cancel active runs in ANY mode — persistent conversations via the CLI protocol, stateless invokes via task cancellation (the cancelled invoke raises `ClaudeCliInterruptedError`; the subprocess is cleaned up).
-- **Typed errors** — `ClaudeCliRateLimitError`, `ClaudeCliOverloadedError`, `ClaudeCliAuthError`, `ClaudeCliTimeoutError`, `ClaudeCliBudgetExceededError`: build retry/fallback policies without parsing error text. Tip: set `max_retries=0` if your own fallback layer should see raw errors.
-- **OAuth guard** — `auth="oauth"` (default) neutralizes an inherited `ANTHROPIC_API_KEY`/`ANTHROPIC_AUTH_TOKEN` so the CLI can never silently bill your API account instead of using your subscription. `auth="inherit"` opts out.
-- **Rate-limit visibility** — `response_metadata["rate_limit"]` reports your subscription window: `{status, type, utilization, resets_at}`.
-- **`history_mode="replay"`** — replay arbitrary histories with full role fidelity (costs one generation per historical user message).
-- **Files API blocks** — `file_id` sources are materialized via the Anthropic API when a key is available (used only for the download, never passed to the CLI) or dropped with a warning.
-- **`ClaudeCodeToolsMiddleware`** — give ANY LangChain agent (any provider as orchestrator) a `claude_code` tool that delegates filesystem/shell work to a sandboxed, budget-capped Claude Code run:
+`BaseChatModel` is stateless; the CLI is a stateful session. The bridge between them is a **session prefix-cache**:
+
+- A history that grows by appending — chatbots, agent loops, tool cycles — **resumes its CLI session** and sends only the new messages. Full fidelity, and the CLI's automatic prompt caching keeps input tokens cheap.
+- A history with no recognizable prefix (trimmed, reordered, hand-built) is **flattened into a single role-labelled user message**, preserving image and document blocks. A `ClaudeCliCompatWarning` tells you when that happens.
+- `session_store="file"` persists the cache in `~/.langchain-claude-cli/`, so conversations survive process restarts. Inside a LangGraph node the `thread_id` is picked up automatically as a recovery path.
+- `ChatClaudeCli(session_id="<uuid>")` pins an explicit CLI session.
+
+For long-lived processes, `persistent=True` keeps a live client per conversation — roughly twice as fast on reused turns, and it enables `interrupt()` and `set_session_model()`.
+
+`interrupt()` works in every mode, and the cancelled call raises `ClaudeCliInterruptedError`. Note that an interrupted turn ends its CLI session: the session is left holding an unfinished reply, and resuming it would make the model continue that reply instead of answering your next message. The following turn therefore re-sends its history into a fresh session — the conversation survives, its prompt cache does not.
+
+### History modes
+
+`history_mode` decides what happens when a history *cannot* be resolved to a known session:
+
+- **`"auto"`** (default) — resume when the prefix is recognized, flatten otherwise.
+- **`"flatten"`** — always flatten, even when a resume was possible.
+- **`"replay"`** (experimental) — inject the history as separate `user`/`assistant` entries instead of flattening.
+
+Replay looks like the obvious right answer and mostly isn't. The CLI's input is a *live conversation*, not a transcript upload: every historical `user` entry triggers a real generation, so cost grows with history length, and the fabricated assistant turn races against the model's own live reply — it may keep its own and discard yours. Fidelity is genuinely non-deterministic, which is why the invariant ships as a nightly `xfail` rather than a guarantee. Use it only when role fidelity matters more than cost and determinism.
+
+### Session stores
+
+The cache maps history fingerprints to CLI session ids. It stores **only SHA-256 digests and session ids — never message content** — under two key shapes, plus a reserved `__order__` entry that keeps the LRU (256 entries) durable:
+
+```
+fp:<sha256 of the history prefix>       → {"session_id": "..."}
+thread:<profile digest>:<thread_id>     → {"session_id": "...", "count": N}
+```
+
+`"memory"` is per-instance and dies with the process. `"file"` writes `~/.langchain-claude-cli/sessions.json` with POSIX locking and atomic renames; the worst case under concurrent writers is a lost entry, which degrades that conversation to flatten — never corruption. For a custom path, pass the store directly:
+
+```python
+from langchain_claude_cli import ChatClaudeCli, FileStore
+
+llm = ChatClaudeCli(session_store=FileStore("/var/lib/myapp/sessions.json"))
+```
+
+`FileStore` assumes a shared filesystem, so once you run more than one worker you'll want a real backend. Any object implementing `SessionStoreBackend` works:
+
+```python
+import json
+from langchain_claude_cli import ChatClaudeCli, SessionStoreBackend
+
+class RedisStore(SessionStoreBackend):
+    def __init__(self, client, prefix="lcc:"):
+        self._r, self._p = client, prefix
+
+    def get(self, key):
+        raw = self._r.get(self._p + key)
+        return json.loads(raw) if raw else None
+
+    def set(self, key, value):
+        self._r.set(self._p + key, json.dumps(value))
+
+    def keys(self):
+        return [k.decode().removeprefix(self._p) for k in self._r.scan_iter(f"{self._p}*")]
+
+    def delete(self, key):
+        self._r.delete(self._p + key)
+
+llm = ChatClaudeCli(session_store=RedisStore(redis_client))
+```
+
+`SessionCache` serializes its own calls, so a backend only needs internal locking when the same store is shared across processes.
+
+One caveat worth knowing: the store maps to sessions, but the transcripts live inside the CLI, which prunes inactive sessions after `cleanupPeriodDays` (~30 days). A persistent store therefore outlives what it points at. That case is handled — a purged session is detected on the first attempt, every mapping pointing at it is invalidated, and the turn transparently re-runs as a new session with its retry budget intact.
+
+## Agentic mode
+
+By default the model runs with **no built-in tools**: pure-LLM semantics, the same risk profile as an API call. Claude Code's own capabilities are opt-in:
+
+```python
+from langchain_claude_cli import ChatClaudeCli, READ_ONLY_TOOLS
+
+analyst = ChatClaudeCli(
+    model="claude-sonnet-4-5",
+    builtin_tools=READ_ONLY_TOOLS,        # Read, Glob, Grep
+    max_turns=10,
+    permission_mode="bypassPermissions",
+    cwd="/path/to/project",
+)
+analyst.invoke("Find all TODO comments and summarize them")
+```
+
+`builtin_tools` takes a list of tool names or `ClaudeTool` values, or the `"claude_code"` preset for everything. Ready-made groups: `READ_ONLY_TOOLS`, `WRITE_TOOLS`, `SHELL_TOOLS`, `NETWORK_TOOLS`, `ALL_TOOLS`. LangChain tools (deferred to you) and built-in tools (executed in-run) can be combined, and each built-in call is emitted as a `tool_use` block in the stream so you can render live activity.
+
+You can also hand Claude Code's toolset to an agent driven by *any* provider:
 
 ```python
 from langchain.agents import create_agent
 from langchain_claude_cli.middleware import ClaudeCodeToolsMiddleware
 
 agent = create_agent(
-    model=any_chat_model,   # ChatOpenAI, ChatAnthropic, ChatClaudeCli...
+    model=any_chat_model,               # ChatOpenAI, ChatAnthropic, ChatClaudeCli...
     tools=[...],
     middleware=[ClaudeCodeToolsMiddleware(cwd="/workspace", max_budget_usd=0.5)],
 )
 ```
 
-> Production tip: always set `timeout` — if the CLI process is killed mid-run (e.g. subscription rate-limit exhaustion) the SDK stream can hang instead of raising.
+### Security
 
-## Reliability
+With `builtin_tools` plus `bypassPermissions`, the CLI subprocess runs as **your OS user**: prompt injection becomes code execution, and `cwd` does *not* sandbox file access. Never enable agentic mode on untrusted input. Prefer `READ_ONLY_TOOLS`, `disallowed_tools=["Bash"]`, `sandbox`, and containers in production. The default pure-LLM mode carries none of these risks.
 
-- **Inactivity watchdog** (0.3): if the SDK stream goes silent (`inactivity_timeout`, default 120s in pure-LLM mode, disabled in agentic mode where slow tools are legitimate), the run aborts with `ClaudeCliTimeoutError` and the subprocess is cleaned up — a dead CLI can otherwise leave the stream open forever ([upstream issue](https://github.com/anthropics/claude-agent-sdk-python/issues/1110)).
-- **Logging**: enable `logging.getLogger("langchain_claude_cli")` at DEBUG to see session resolution, pool activity, tool defer/delivery and retries.
-- **Deterministic tests**: the core E2E suite runs against recorded cassettes (no CLI, no quota — `tests/cassette_tests`, refresh with `RECORD_CASSETTES=1`); a nightly [contract suite](.github/workflows/contract.yml) checks the live CLI still honors the behavior invariants the design depends on.
-- `history_mode="replay"` is **experimental**: fidelity of injected assistant turns is race-dependent (contract finding).
+## Error handling
 
-## How conversations work
+Every failure mode is a typed exception, so retry and fallback logic never has to parse error text:
 
-`BaseChatModel` is stateless; the CLI is a stateful session. The bridge is a **session prefix-cache**:
+`ClaudeCliError` · `ClaudeCliAuthError` · `ClaudeCliRateLimitError` · `ClaudeCliOverloadedError` · `ClaudeCliTimeoutError` · `ClaudeCliBudgetExceededError` · `ClaudeCliInterruptedError`
 
-- A conversation that grows by appending (chatbots, agent loops, tool cycles) **resumes its CLI session** and sends only the new messages — full fidelity, and the CLI's automatic prompt caching keeps input tokens cheap.
-- An arbitrary history with no known prefix (e.g. trimmed or hand-built) is **flattened into a single user message** — role-labelled text, with image/document blocks preserved. A `ClaudeCliCompatWarning` tells you when this happens.
-- You can pin a CLI session explicitly with the constructor: `ChatClaudeCli(session_id="<uuid>")` — resumes that session, sending only the last message. (An ambient `configurable.session_id` is deliberately ignored: `RunnableWithMessageHistory` uses that same key as a chat-history key, not a CLI session UUID.)
+Retries on 429/5xx are handled for you (`max_retries`, default 2) — set `max_retries=0` if your own fallback layer should see the raw error. `response_metadata["rate_limit"]` reports your subscription window as `{status, type, utilization, resets_at}`.
 
-## Agentic mode (opt-in)
+Two things worth setting in production: `timeout`, and `inactivity_timeout` (default `"auto"` — 120s in pure-LLM mode, off in agentic mode where slow tools are legitimate). If the CLI process dies mid-run, the SDK stream can otherwise hang open forever.
 
-By default the model runs with **no built-in tools** — pure-LLM semantics, same risk profile as an API call. Opt in to Claude Code's agentic capabilities:
+Debug logging: `logging.getLogger("langchain_claude_cli")` at `DEBUG` shows session resolution, pool activity, tool defer/delivery and retries.
+
+## Options
+
+### Model
+
+| Option | Default | Description |
+|---|---|---|
+| `model` | `"claude-sonnet-4-5"` | Model id (alias: `model_name`) |
+| `system_prompt` | `None` | Extra system prompt, prepended to any `SystemMessage` |
+| `thinking` | `None` | `{"type": "enabled", "budget_tokens": N}`, or `{"type": "adaptive"}` |
+| `effort` | `None` | `max` / `xhigh` / `high` / `medium` / `low` |
+| `max_tokens` | `None` | Client-side truncation (see compatibility below) |
+| `stop_sequences` | `None` | Client-side, output is cut at the sequence (alias: `stop`) |
+| `betas` | `None` | Beta feature flags passed to the CLI |
+| `mcp_servers` | `None` | ChatAnthropic connector format or CLI-native stdio/SSE/HTTP |
+
+### Sessions and performance
+
+| Option | Default | Description |
+|---|---|---|
+| `session_store` | `"memory"` | `"memory"`, `"file"` (persistent), or a `SessionStoreBackend` |
+| `session_id` | `None` | Resume an explicit CLI session |
+| `history_mode` | `"auto"` | `"auto"` resume-then-flatten, `"flatten"` always, `"replay"` (experimental) |
+| `persistent` | `False` | Keep a live client per conversation |
+| `pool_max_clients` | `4` | Max live clients when `persistent=True` |
+| `pool_ttl` | `300.0` | Seconds an idle pooled client is kept |
+
+### Agentic
+
+| Option | Default | Description |
+|---|---|---|
+| `builtin_tools` | `None` | `None` = pure LLM; a tool list; or the `"claude_code"` preset |
+| `allowed_tools` / `disallowed_tools` | `None` | Fine-grained allow/deny lists |
+| `permission_mode` | `None` | `default` / `acceptEdits` / `plan` / `bypassPermissions` |
+| `max_turns` | `None` | 1 in pure-LLM mode, unlimited in agentic mode |
+| `cwd` / `add_dirs` | `None` | Working directory and extra readable roots |
+| `sandbox` | `None` | CLI sandbox configuration |
+| `max_budget_usd` | `None` | Hard cost cap per run |
+
+### Reliability
+
+| Option | Default | Description |
+|---|---|---|
+| `max_retries` | `2` | Client-side retries on 429/5xx |
+| `timeout` | `None` | Total run timeout, in seconds |
+| `inactivity_timeout` | `"auto"` | Abort if the stream goes silent; `None` disables |
+| `fallback_model` | `None` | Model to fall back to when the primary fails |
+
+### Environment and auth
+
+| Option | Default | Description |
+|---|---|---|
+| `auth` | `"oauth"` | Neutralizes inherited `ANTHROPIC_API_KEY` / `ANTHROPIC_AUTH_TOKEN` so the CLI always uses your subscription. `"inherit"` opts out |
+| `env` | `None` | Extra environment variables for the CLI subprocess |
+| `cli_path` | `None` | Path to a specific `claude` binary |
+
+## Headless deployment
+
+Interactive login is not an option in a container or on CI. Mint a long-lived token on a machine where you *are* logged in:
+
+```bash
+claude setup-token      # prints a 1-year, inference-scoped OAuth token
+```
+
+From there it only has to reach the process environment — the CLI subprocess inherits it.
+
+### From a `.env` file
+
+The usual choice in development. **Nothing in this package reads `.env`**, so load it yourself before the model runs:
+
+```bash
+# .env — never commit this
+CLAUDE_CODE_OAUTH_TOKEN=<the token setup-token printed>
+```
 
 ```python
-from langchain_claude_cli import ChatClaudeCli, READ_ONLY_TOOLS
+from dotenv import load_dotenv          # pip install python-dotenv
+from langchain_claude_cli import ChatClaudeCli
 
-# Read-only code analyst
-analyst = ChatClaudeCli(
-    model="claude-sonnet-4-5",
-    builtin_tools=READ_ONLY_TOOLS,          # Read, Glob, Grep
-    max_turns=10,
-    permission_mode="bypassPermissions",
-    cwd="/path/to/project",
-)
-analyst.invoke("Find all TODO comments and summarize them")
+load_dotenv()                           # must run before the first invoke
+llm = ChatClaudeCli(model="claude-sonnet-4-5")
+```
 
-# Full agent (filesystem + bash) — trusted prompts only!
-agent = ChatClaudeCli(
+Runtimes that read env files themselves need no `load_dotenv()` — `env_file:` in Docker Compose, `EnvironmentFile=` in a systemd unit, or your platform's secret store. Either way the variable is set for the whole process.
+
+### Per instance
+
+When one process serves several accounts, pass the token explicitly instead. `env` is merged on top of the inherited environment, so each instance can carry a different one:
+
+```python
+llm = ChatClaudeCli(
     model="claude-sonnet-4-5",
-    builtin_tools="claude_code",            # everything
-    permission_mode="bypassPermissions",
-    max_budget_usd=1.0,                     # hard cost cap
-    cwd="/path/to/project",
+    env={"CLAUDE_CODE_OAUTH_TOKEN": token_for_this_user},
 )
 ```
 
-`builtin_tools` accepts a list of tool names / `ClaudeTool` enum values, or the `"claude_code"` preset. `allowed_tools`, `disallowed_tools`, `add_dirs`, `sandbox` and `max_budget_usd` map straight to the CLI. LangChain tools (deferred) and built-in tools (executed in-run) can be combined.
+This also overrides any local `claude` login, which is what makes it work on a developer machine already authenticated as someone else.
 
-Agentic runs stream too: each built-in tool call the CLI executes is emitted as a `tool_use` content block in the stream, so you can render live activity ("→ Read data.txt") alongside the text tokens.
+### What to watch for
 
-### Security
+- **No refresh token.** These tokens last a year and cannot renew themselves. When one expires the CLI simply fails — mint a new one and restart the process.
+- **Keep `auth="oauth"`.** `ANTHROPIC_AUTH_TOKEN` outranks `CLAUDE_CODE_OAUTH_TOKEN` in the CLI's auth precedence; the default guard neutralizes it so a stray value in the environment cannot silently redirect your billing.
+- **Isolate tenants.** Several accounts in one container should each get their own `CLAUDE_CONFIG_DIR` in the same `env` dict, or they will share session state.
 
-With `builtin_tools` + `bypassPermissions` the CLI subprocess runs as **your OS user**: prompt injection becomes code execution, and `cwd` does **not** sandbox file access. Never enable agentic mode on untrusted input; prefer `READ_ONLY_TOOLS`, `disallowed_tools=["Bash"]`, `sandbox`, and containers for production. Pure-LLM mode (the default) has none of these risks.
+## ChatAnthropic compatibility
 
-## Migration
-
-### From ChatAnthropic
+Every `ChatAnthropic` constructor parameter is accepted — nothing raises on migration, so it is a two-line change:
 
 ```python
 # Before
 from langchain_anthropic import ChatAnthropic
 llm = ChatAnthropic(model="claude-sonnet-4-5", api_key="sk-ant-...")
 
-# After — everything else stays the same
+# After
 from langchain_claude_cli import ChatClaudeCli
 llm = ChatClaudeCli(model="claude-sonnet-4-5")
 ```
 
-### From langchain-claude-code (the old library)
+Support comes in three levels:
 
-| Old (`ChatClaudeCode`) | New (`ChatClaudeCli`) |
-|---|---|
-| `ChatClaudeCode(...)` | `ChatClaudeCli(...)` |
-| `bind_tools` via prompt injection | Real MCP-based tool calling |
-| `thinking` (prompt text hack) | Native extended thinking |
-| Token usage unavailable | Full `usage_metadata` |
-| `max_turns=5` to enable tools | `builtin_tools=[...]` (explicit opt-in) |
-| History flattened to text | Session resume with full fidelity |
+**Native.** Streaming, tool calling, structured output, extended thinking, `effort`, token usage (including cache reads and `total_cost_usd`), `stop_reason`, images, PDFs, system messages, MCP servers, `web_search` / `web_fetch`, `max_retries`, `timeout`, `fallback_model`, LangGraph agents.
 
-## ⚖️ Legal & Terms of Service
+**Client-side workaround.** `stop_sequences` (output scanned and cut client-side), `max_tokens` (truncation at ~4 chars/token with a synthetic `stop_reason`), `tool_choice` (system-prompt instruction, validated, one retry, then an explicit error), `get_num_tokens_from_messages` (heuristic — there is no count-tokens endpoint without an API key), arbitrary histories (see [Conversations and sessions](#conversations-and-sessions)).
 
-> **Disclaimer:** community project, **not affiliated with or endorsed by Anthropic**. You are responsible for complying with Anthropic's terms.
+**Accepted no-op**, warned once: `temperature`, `top_k`, `top_p`, `anthropic_api_url`, `anthropic_proxy`, `default_headers`, `inference_geo`, `context_management`, `cache_control` blocks (the CLI caches automatically; you still get the token counts), citations, computer use, `strict` tool use.
 
-This package uses the official, MIT-licensed `claude-agent-sdk` published by Anthropic — no reverse engineering, no credential extraction. Your usage is governed by Anthropic's [Consumer Terms](https://www.anthropic.com/legal/consumer-terms) (Pro/Max) or [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) (API), and the [Acceptable Use Policy](https://www.anthropic.com/legal/aup). Notably: consumer subscriptions are for individual use, may not be resold or used to power products for end users, and heavy automated usage counts against your subscription's rate limits. **For anything beyond personal/internal use, use an Anthropic API key under the Commercial Terms** (and then you likely want `langchain-anthropic` directly).
+## Legal
+
+> Community project — **not affiliated with or endorsed by Anthropic.** You are responsible for complying with Anthropic's terms.
+
+This package builds on the official, MIT-licensed `claude-agent-sdk`. No reverse engineering, no credential extraction. Your usage is governed by Anthropic's [Consumer Terms](https://www.anthropic.com/legal/consumer-terms) (Pro/Max) or [Commercial Terms](https://www.anthropic.com/legal/commercial-terms) (API), and the [Acceptable Use Policy](https://www.anthropic.com/legal/aup).
+
+In particular: consumer subscriptions are for individual use, may not be resold or used to power a product for end users, and heavy automated usage counts against your own rate limits. **For anything beyond personal or internal use, use an Anthropic API key under the Commercial Terms** — at which point you probably want `langchain-anthropic` directly.
 
 ## License
 
-MIT
+MIT © Charly López — see [LICENSE](LICENSE).

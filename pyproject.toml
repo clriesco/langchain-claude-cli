@@ -8,11 +8,11 @@ description = "Drop-in ChatAnthropic replacement backed by the Claude Code CLI â
 license = { text = "MIT" }
 readme = "README.md"
 authors = [{ name = "Charly LÃ³pez", email = "clriesco@gmail.com" }]
-version = "0.4.3"
+version = "1.0.0"
 requires-python = ">=3.10"
 keywords = ["langchain", "claude", "anthropic", "claude-code", "claude-agent-sdk"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
