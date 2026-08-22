@@ -31,9 +31,11 @@ from langchain_claude_cli._convert import (
 from langchain_claude_cli._runner import (
     _is_stale_session_error,
     _log_stale_degrade,
+    _reraise_wrapped,
     _stderr_collector,
 )
 from langchain_claude_cli._sessions import Resolution
+from langchain_claude_cli.exceptions import classify_result_error
 
 if TYPE_CHECKING:
     from langchain_claude_cli.chat_models import ChatClaudeCli
@@ -293,8 +295,13 @@ class _StreamingMixin:
                     _log_stale_degrade(resolution.session_id, removed)
                     resolution = Resolution(strategy="new", suffix=list(messages))
                     degraded = True
+                elif "returned an error result" in str(e):
+                    # Genuine CLI error result (error_max_turns, ...): type it
+                    # off the ResultMessage subtype and carry the run's cost —
+                    # the streaming path dropped both before 1.1.0.
+                    raise classify_result_error(final_result, str(e)) from e
                 else:
-                    raise
+                    _reraise_wrapped(e)
             finally:
                 await cast(Any, stream).aclose()
             if degraded:

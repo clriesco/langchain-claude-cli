@@ -41,7 +41,9 @@ from langchain_claude_cli.exceptions import (
     ClaudeCliInterruptedError,
     ClaudeCliOverloadedError,
     ClaudeCliTimeoutError,
+    classify_result_error,
     classify_status,
+    wrap_sdk_error,
 )
 
 if TYPE_CHECKING:
@@ -93,6 +95,18 @@ def _is_contradictory_success(result: Any, text: str) -> bool:
         if not errors and getattr(result, "subtype", None) == "success":
             return True
     return text.rstrip().endswith("returned an error result: success")
+
+
+def _reraise_wrapped(exc: Exception) -> None:
+    """Re-raise `exc` inside this package's hierarchy, preserving its traceback.
+
+    A non-SDK exception is re-raised untouched (`raise` would be equivalent);
+    only an SDK error is re-typed, and then the original becomes its __cause__.
+    """
+    wrapped = wrap_sdk_error(exc)
+    if wrapped is exc:
+        raise exc
+    raise wrapped.with_traceback(exc.__traceback__) from exc
 
 
 _STALE_SESSION_MARKER = "No conversation found with session ID"
@@ -509,7 +523,7 @@ class _RunnerMixin:
                             # Caller pinned this exact session (constructor or
                             # config kwarg): silently swapping in an empty new
                             # session would drop context — propagate, fast.
-                            raise
+                            _reraise_wrapped(e)
                         removed = self._session_cache.invalidate(resolution.session_id)
                         _log_stale_degrade(resolution.session_id, removed)
                         resolution = Resolution(strategy="new", suffix=list(messages))
@@ -517,7 +531,9 @@ class _RunnerMixin:
                         break
                     if "maximum budget" in text.lower():
                         # Deliberate, user-set limit — terminal, never retried.
-                        raise ClaudeCliBudgetExceededError(text) from e
+                        raise ClaudeCliBudgetExceededError(text).attach_result(
+                            collected["result"]
+                        ) from e
                     if "returned an error result" in text:
                         err_result = collected["result"]
                         if _is_contradictory_success(err_result, text):
@@ -545,11 +561,14 @@ class _RunnerMixin:
                                 "contradictory CLI result "
                                 "(is_error=true, subtype=success) with no assistant "
                                 "messages; treating as transient"
-                            ) from e
+                            ).attach_result(err_result) from e
                         # Genuine CLI error result (error_max_turns,
                         # error_during_execution, ...): not a transport failure —
                         # retrying would just repeat the same failing run.
-                        raise
+                        # Typed off the ResultMessage subtype (never its prose)
+                        # and carrying the run's cost/usage, which the CLI
+                        # already reported and the bare SDK Exception dropped.
+                        raise classify_result_error(err_result, text) from e
                     last_error = e  # transport/process error: retry
                     if attempt + 1 < attempts:
                         logger.info(
@@ -560,7 +579,7 @@ class _RunnerMixin:
                         )
                         await asyncio.sleep(min(2**attempt, 8))
                         continue
-                    raise
+                    _reraise_wrapped(e)
 
                 result: Any = collected["result"]
                 status = getattr(result, "api_error_status", None) if result else None
@@ -574,7 +593,9 @@ class _RunnerMixin:
                     and result.is_error
                     and status in _RETRYABLE_STATUS
                 ):
-                    last_error = classify_status(status, detail or f"status {status}")
+                    last_error = classify_status(
+                        status, detail or f"status {status}"
+                    ).attach_result(result)
                     if attempt + 1 < attempts:
                         await asyncio.sleep(min(2**attempt, 8))
                         continue
@@ -587,7 +608,16 @@ class _RunnerMixin:
                     and result.is_error
                     and status not in _RETRYABLE_STATUS
                 ):
-                    raise classify_status(status, detail or str(result.subtype))
+                    if status is None:
+                        # No HTTP status: this is a CLI *result* error whose
+                        # subtype (error_max_turns, error_during_execution)
+                        # says what happened. Type it from that, not from text.
+                        raise classify_result_error(
+                            result, detail or str(result.subtype)
+                        )
+                    raise classify_status(
+                        status, detail or str(result.subtype)
+                    ).attach_result(result)
                 return (
                     collected["msgs"],
                     result,

@@ -93,7 +93,14 @@ Pydantic models (v1 and v2), plain dicts and `TypedDict` schemas are accepted, a
 - `session_store="file"` persists the cache in `~/.langchain-claude-cli/`, so conversations survive process restarts. Inside a LangGraph node the `thread_id` is picked up automatically as a recovery path.
 - `ChatClaudeCli(session_id="<uuid>")` pins an explicit CLI session.
 
-For long-lived processes, `persistent=True` keeps a live client per conversation — roughly twice as fast on reused turns, and it enables `interrupt()` and `set_session_model()`.
+For long-lived processes, `persistent=True` keeps a live client per conversation — roughly twice as fast on reused turns, and it enables `interrupt()` and `set_session_model()`. The pool is **per instance**: every model built with `persistent=True` owns its own loop thread and its own set of live `claude` subprocesses, so a process that builds many instances should release them.
+
+```python
+async with ChatClaudeCli(persistent=True) as llm:
+    ...  # or: await llm.aclose() / llm.close()
+```
+
+If you never resume a conversation, `persistent=True` buys you nothing — leave it off.
 
 `interrupt()` works in every mode, and the cancelled call raises `ClaudeCliInterruptedError`. Note that an interrupted turn ends its CLI session: the session is left holding an unfinished reply, and resuming it would make the model continue that reply instead of answering your next message. The following turn therefore re-sends its history into a fresh session — the conversation survives, its prompt cache does not.
 
@@ -192,9 +199,32 @@ With `builtin_tools` plus `bypassPermissions`, the CLI subprocess runs as **your
 
 ## Error handling
 
-Every failure mode is a typed exception, so retry and fallback logic never has to parse error text:
+Every failure mode is a typed exception, so retry and fallback logic never has to parse error text. **Everything raised out of this package is a `ClaudeCliError`**, including errors originating in `claude_agent_sdk`.
 
-`ClaudeCliError` · `ClaudeCliAuthError` · `ClaudeCliRateLimitError` · `ClaudeCliOverloadedError` · `ClaudeCliTimeoutError` · `ClaudeCliBudgetExceededError` · `ClaudeCliInterruptedError`
+| | |
+|---|---|
+| API | `ClaudeCliAuthError` · `ClaudeCliRateLimitError` · `ClaudeCliOverloadedError` |
+| Run | `ClaudeCliTimeoutError` · `ClaudeCliBudgetExceededError` · `ClaudeCliInterruptedError` |
+| CLI error result | `ClaudeCliResultError` → `ClaudeCliMaxTurnsError` · `ClaudeCliExecutionError` |
+| Infrastructure | `ClaudeCliStartupError` → `ClaudeCliNotFoundError` · `ClaudeCliTransportError` → `ClaudeCliProcessError` |
+
+The last two rows are the distinction a batch runner needs: a **result** error consumed budget and will fail the same way if retried, while a **startup** error never reached the model, so the work is safe to requeue. The SDK-derived types also inherit from the SDK class they replace, so an existing `except CLIConnectionError` keeps working.
+
+An error carries the accounting of the run that failed, whenever the CLI reported one before failing — so a failed run can still be costed:
+
+```python
+try:
+    await llm.ainvoke(prompt)
+except ClaudeCliError as exc:
+    if exc.total_cost_usd is not None:
+        ledger.add(exc.total_cost_usd, turns=exc.num_turns)
+    if isinstance(exc, ClaudeCliStartupError):
+        queue.requeue(job)          # never ran; not a data problem
+    elif isinstance(exc, ClaudeCliMaxTurnsError):
+        review.flag(job, turns=exc.num_turns)
+```
+
+`usage`, `total_cost_usd`, `num_turns`, `duration_ms`, `session_id`, `subtype` and the whole `result_message` are exposed, each `None` when unknown, and they survive pickling.
 
 Retries on 429/5xx are handled for you (`max_retries`, default 2) — set `max_retries=0` if your own fallback layer should see the raw error. `response_metadata["rate_limit"]` reports your subscription window as `{status, type, utilization, resets_at}`.
 
@@ -224,8 +254,8 @@ Debug logging: `logging.getLogger("langchain_claude_cli")` at `DEBUG` shows sess
 | `session_store` | `"memory"` | `"memory"`, `"file"` (persistent), or a `SessionStoreBackend` |
 | `session_id` | `None` | Resume an explicit CLI session |
 | `history_mode` | `"auto"` | `"auto"` resume-then-flatten, `"flatten"` always, `"replay"` (experimental) |
-| `persistent` | `False` | Keep a live client per conversation |
-| `pool_max_clients` | `4` | Max live clients when `persistent=True` |
+| `persistent` | `False` | Keep a live client per conversation (release with `aclose()`) |
+| `pool_max_clients` | `4` | Max live clients **per instance** when `persistent=True` |
 | `pool_ttl` | `300.0` | Seconds an idle pooled client is kept |
 
 ### Agentic

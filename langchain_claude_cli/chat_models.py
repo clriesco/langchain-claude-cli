@@ -131,8 +131,21 @@ class ChatClaudeCli(_OptionsMixin, _RunnerMixin, _StreamingMixin, BaseChatModel)
     """Keep a live ClaudeSDKClient per conversation: multi-turn resumes skip
     the subprocess restart (~2x faster per reused turn, spike S8) and enable
     interrupt()/set_model(). Plain conversation turns only — tool-calling
-    cycles use the stateless path. For processes with a controlled lifetime."""
+    cycles use the stateless path.
+
+    The pool is **per instance**, not per process: every ``ChatClaudeCli``
+    built with ``persistent=True`` owns its own background loop thread and its
+    own set of live ``claude`` subprocesses. Building many instances (one per
+    document, per tenant, per prompt) therefore multiplies both — a few hundred
+    file descriptors each. Release them with ``await llm.aclose()`` (or
+    ``llm.close()``, or the ``async with``/``with`` context manager) when the
+    instance is done; leaving them to the interpreter's exit hook only works
+    for a process that builds a handful.
+
+    If you never resume a conversation, ``persistent=True`` saves nothing —
+    prefer the default."""
     pool_max_clients: int = 4
+    """Max live clients **per instance** (see ``persistent``), not per process."""
     pool_ttl: float = 300.0
 
     _session_cache: SessionCache = PrivateAttr(default=None)  # type: ignore[assignment]
@@ -215,6 +228,41 @@ class ChatClaudeCli(_OptionsMixin, _RunnerMixin, _StreamingMixin, BaseChatModel)
         if self._pool is None:
             raise ClaudeCliError("set_session_model() requires persistent=True")
         self._pool.set_model(model, session_id)
+
+    # ── lifecycle (1.1.0) ────────────────────────────────────
+
+    def close(self) -> None:
+        """Release this instance's persistent client pool.
+
+        Disconnects every live ``claude`` subprocess the instance is holding
+        and stops its background loop thread, blocking until the file
+        descriptors are actually back. No-op with ``persistent=False``, and
+        idempotent, so it is safe in a ``finally``.
+
+        The instance stays usable afterwards on the stateless path; only the
+        persistent fast path is gone (rebuild the model to get it back).
+        """
+        if self._pool is not None:
+            self._pool.close()
+            self._pool = None
+
+    async def aclose(self) -> None:
+        """Async :meth:`close` — shutdown runs off the caller's event loop."""
+        if self._pool is not None:
+            pool, self._pool = self._pool, None
+            await pool.aclose()
+
+    def __enter__(self) -> ChatClaudeCli:
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        self.close()
+
+    async def __aenter__(self) -> ChatClaudeCli:
+        return self
+
+    async def __aexit__(self, *exc: Any) -> None:
+        await self.aclose()
 
     # ── LangChain plumbing ───────────────────────────────────
 

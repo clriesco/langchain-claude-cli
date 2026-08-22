@@ -14,15 +14,34 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import contextlib
 import logging
 import threading
 import time
+import weakref
 from collections import OrderedDict
 from concurrent.futures import Future
 from dataclasses import dataclass
 from typing import Any
 
+from langchain_claude_cli.exceptions import ClaudeCliStartupError
+
 logger = logging.getLogger("langchain_claude_cli")
+
+
+def _atexit_close(ref: weakref.ReferenceType[ClientPool]) -> None:
+    """Interpreter-shutdown hook that does not keep the pool alive.
+
+    Registering the bound method instead would make the atexit registry hold a
+    strong reference to every pool ever built, so a pool whose owner was
+    dropped could never be collected.
+    """
+    pool = ref()
+    if pool is not None:
+        # Best-effort at interpreter exit: the process is going away anyway, so
+        # never let a wedged subprocess hold up shutdown the way the caller-
+        # facing default would.
+        pool.close(timeout=2.0)
 
 
 @dataclass
@@ -33,7 +52,13 @@ class _Entry:
 
 
 class ClientPool:
-    """LRU+TTL pool of live ClaudeSDKClient instances, keyed by session_id."""
+    """LRU+TTL pool of live ClaudeSDKClient instances, keyed by session_id.
+
+    One pool owns one background event-loop thread and up to ``max_clients``
+    live ``claude`` subprocesses. Both are released by :meth:`close` /
+    :meth:`aclose`; until then they survive the pool's owner, because the loop
+    thread holds a reference back to the pool.
+    """
 
     def __init__(self, max_clients: int = 4, ttl: float = 300.0) -> None:
         self._max = max_clients
@@ -41,29 +66,69 @@ class ClientPool:
         self._entries: OrderedDict[str, _Entry] = OrderedDict()
         self._lock = threading.Lock()
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._thread: threading.Thread | None = None
         self._loop_ready = threading.Event()
         self._last_session: str | None = None
-        atexit.register(self.close)
+        self._loop_error: BaseException | None = None
+        self._closed = False
+        atexit.register(_atexit_close, weakref.ref(self))
 
     # ── background loop ──────────────────────────────────────
 
     def _ensure_loop(self) -> asyncio.AbstractEventLoop:
         with self._lock:
+            if self._closed:
+                raise ClaudeCliStartupError(
+                    "client pool is closed (aclose() was called); build a new "
+                    "ChatClaudeCli to use persistent=True again"
+                )
             if self._loop is None:
 
                 def _run() -> None:
-                    loop = asyncio.new_event_loop()
+                    try:
+                        loop = asyncio.new_event_loop()
+                    except OSError as exc:
+                        # A new loop needs file descriptors (selector + self
+                        # pipe). Under FD exhaustion this raises here, in the
+                        # thread — the waiter below must not be left to time
+                        # out into a bare assert.
+                        self._loop_error = exc
+                        self._loop_ready.set()
+                        return
                     self._loop = loop
                     asyncio.set_event_loop(loop)
                     self._loop_ready.set()
-                    loop.run_forever()
+                    try:
+                        loop.run_forever()
+                    finally:
+                        with contextlib.suppress(Exception):
+                            loop.close()
 
-                threading.Thread(
+                self._loop_error = None
+                self._thread = threading.Thread(
                     target=_run, daemon=True, name="claude-cli-pool"
-                ).start()
-        self._loop_ready.wait(timeout=10)
-        assert self._loop is not None
-        return self._loop
+                )
+                self._thread.start()
+        ready = self._loop_ready.wait(timeout=10)
+        loop = self._loop
+        if loop is None:
+            # Was: `assert self._loop is not None`. A bare assert here surfaced
+            # as an AssertionError with no message — indistinguishable from a
+            # bug in the caller — precisely when the machine was out of file
+            # descriptors and the loop thread had died starting up.
+            reason = (
+                str(self._loop_error)
+                if self._loop_error is not None
+                else (
+                    "thread did not become ready within 10s"
+                    if not ready
+                    else "loop thread exited during startup"
+                )
+            )
+            raise ClaudeCliStartupError(
+                f"persistent client pool could not start its event loop: {reason}"
+            ) from self._loop_error
+        return loop
 
     def _submit(self, coro: Any) -> Future:
         return asyncio.run_coroutine_threadsafe(coro, self._ensure_loop())
@@ -195,11 +260,51 @@ class ClientPool:
         with self._lock:
             self._evict_locked(session_id)
 
-    def close(self) -> None:
+    def close(self, timeout: float = 10.0) -> None:
+        """Disconnect every pooled client and stop the background loop thread.
+
+        Idempotent and safe from any thread (including atexit). Blocks until
+        the ``claude`` subprocesses are gone, so the file descriptors they held
+        are actually back before this returns — bounded by ``timeout``, after
+        which shutdown proceeds and the straggler is logged.
+        """
         with self._lock:
-            sessions = list(self._entries)
-        for sid in sessions:
-            self.evict(sid)
+            if self._closed:
+                return
+            self._closed = True
+            entries = list(self._entries.values())
+            self._entries.clear()
+            self._last_session = None
+            loop, thread = self._loop, self._thread
+            self._loop = None
+            self._thread = None
+            self._loop_ready.clear()
+
+        if loop is not None and not loop.is_closed():
+            futures = []
+            for entry in entries:
+                with contextlib.suppress(Exception):
+                    futures.append(
+                        asyncio.run_coroutine_threadsafe(
+                            entry.client.disconnect(), loop
+                        )
+                    )
+            for fut in futures:
+                try:
+                    fut.result(timeout=timeout)
+                except Exception as exc:
+                    logger.debug("pool: disconnect on close failed: %s", exc)
+            with contextlib.suppress(Exception):
+                loop.call_soon_threadsafe(loop.stop)
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=timeout)
+            if thread.is_alive():
+                logger.debug("pool: loop thread did not exit within %ss", timeout)
+
+    async def aclose(self, timeout: float = 10.0) -> None:
+        """Async :meth:`close` — runs the blocking shutdown off the caller's loop."""
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, lambda: self.close(timeout))
 
     def __len__(self) -> int:
         return len(self._entries)

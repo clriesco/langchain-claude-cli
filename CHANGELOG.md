@@ -1,5 +1,109 @@
 # Changelog
 
+## 1.1.0 — 2026-08-22
+
+Four fixes from a production batch run: ~4.100 sites through an agentic loop
+(`builtin_tools=NETWORK_TOOLS`, `max_turns=25`, subscription auth, concurrency
+4). All four are additive — no existing name, signature or metadata key moved.
+
+### Added
+
+- **Errors carry the cost of the run that failed.** When the CLI reported a
+  `ResultMessage` before failing, the exception now exposes `usage`,
+  `total_cost_usd`, `num_turns`, `duration_ms`, `session_id`, `subtype` and the
+  raw `result_message` (each `None` when unknown, on every `ClaudeCliError`, and
+  preserved across pickling). Previously the `ResultMessage` was in scope at the
+  raise site and dropped, so the most expensive failures — the ones that burn
+  the whole turn budget — were unaccountable from outside: a measured batch of
+  50 declared 13,14 USD against ~16 actually spent, because 8 of 53 invocations
+  (15%) ended this way.
+
+  *You can stop:* reconstructing the cost of failed runs, or writing them off.
+
+- **`ClaudeCliMaxTurnsError` and `ClaudeCliExecutionError`.** Exhausting
+  `max_turns` is an expected outcome and now has a type, with the turn count on
+  `.num_turns`. Both derive from the new `ClaudeCliResultError` ("the CLI ran
+  and reported failure" — as opposed to a transport failure, and never
+  retried). The type comes from the `ResultMessage` **subtype**
+  (`error_max_turns` / `error_during_execution`), not from the CLI's wording;
+  the SDK's message text is preserved verbatim as the exception message, so
+  code still matching on that prose keeps working while it migrates. Both paths
+  are covered — `invoke` and `stream`.
+
+  *You can stop:* regex-matching `"Reached maximum number of turns (N)"` on an
+  untyped `Exception`.
+
+- **SDK errors arrive inside this package's hierarchy.** `CLIConnectionError`
+  used to cross the wrapper unwrapped (MRO: `CLIConnectionError →
+  ClaudeSDKError → Exception`), so `except ClaudeCliError` never saw it — and a
+  burst of `Failed to start Claude Code: [Errno 24] Too many open files` was
+  classified as a data failure instead of infrastructure, sending sites that
+  were never visited to human review. Now every error raised out of this package
+  is a `ClaudeCliError`:
+
+  | SDK class | raised as |
+  |---|---|
+  | `CLIConnectionError` | `ClaudeCliStartupError` |
+  | `CLINotFoundError` | `ClaudeCliNotFoundError` |
+  | `ProcessError` | `ClaudeCliProcessError` (keeps `exit_code`, `stderr`) |
+  | other `ClaudeSDKError` | `ClaudeCliTransportError` |
+
+  Each inherits from **both** `ClaudeCliError` and the SDK class it replaces, so
+  an existing `except CLIConnectionError` / `except ProcessError` still catches
+  it. The original is kept as `__cause__` and `.sdk_error`.
+
+  *You can stop:* comparing `type(exc).__name__` against a string.
+
+- **`ChatClaudeCli.aclose()` / `close()`, and context-manager support.**
+  `persistent=True` builds a `ClientPool` per instance, which nothing could
+  release: one background loop thread and up to `pool_max_clients` live `claude`
+  subprocesses (~700 descriptors each), held for the life of the process — and
+  held by the interpreter's exit hook even after the model was dropped.
+  Building one instance per unit of work exhausted the file-descriptor budget at
+  the 45th. `aclose()` (and `close()`, `async with`, `with`) disconnects the
+  clients, blocks until the subprocesses are actually gone, and stops the loop
+  thread. Idempotent, and a no-op without `persistent=True`.
+
+  Also documented: the pool is **per instance**, not per process — the natural
+  reading of `pool_max_clients: 4` is "four clients in total", and it is four
+  *per model you construct*.
+
+### Compatibility
+
+Verified by running the same consumer probe against 1.0.0 and 1.1.0 (four
+failure modes × the catch patterns a consumer may have written). **No pattern
+that caught an error before stops catching it**, and `str(exc)` is byte-for-byte
+identical in every case. Two observable things do change, both by design:
+
+- `except ClaudeCliError` now catches **strictly more**: CLI error results
+  (`error_max_turns`, `error_during_execution`) and SDK errors
+  (`CLIConnectionError`, `ProcessError`, ...) join it. That is the point of the
+  release, but if you have a `try/except ClaudeCliError` followed by a broader
+  `except Exception` doing something different, those errors move from the
+  second branch to the first. Check any place where the two branches disagree.
+- `type(exc).__name__` and `isinstance(exc, RuntimeError)` change for the newly
+  typed errors (`"Exception"` → `"ClaudeCliMaxTurnsError"`,
+  `"CLIConnectionError"` → `"ClaudeCliStartupError"`, ...). Giving these errors a
+  type is what was asked for, so this is unavoidable; matching on the class name
+  string is exactly what the new types replace.
+
+`except CLIConnectionError`, `except ProcessError`, `except Exception`, every
+`response_metadata` key (`num_turns`, `total_cost_usd`, `duration_ms`,
+`rate_limit`) and `usage_metadata["input_token_details"]["cache_read"]` are
+unaffected.
+
+### Fixed
+
+- **An `AssertionError` with no message under descriptor exhaustion.** The pool
+  started its background loop in a thread and then asserted the loop existed
+  (`assert self._loop is not None`). Creating an event loop needs file
+  descriptors, so under exhaustion the thread died in `new_event_loop()`, the
+  waiter timed out, and the run failed with a bare `AssertionError` —
+  indistinguishable from a bug in the caller, and seen twice in the measured
+  batch after 133 s and 178 s of normal work. That path now raises
+  `ClaudeCliStartupError` naming the real cause, with the `OSError` as
+  `__cause__`.
+
 ## 1.0.0 — 2026-07-26
 
 First stable release. The public surface has been stable across the 0.4.x line
