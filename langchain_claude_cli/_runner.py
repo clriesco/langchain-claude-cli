@@ -568,7 +568,7 @@ class _RunnerMixin:
                         # Typed off the ResultMessage subtype (never its prose)
                         # and carrying the run's cost/usage, which the CLI
                         # already reported and the bare SDK Exception dropped.
-                        raise classify_result_error(err_result, text) from e
+                        raise classify_result_error(err_result, text, e) from e
                     last_error = e  # transport/process error: retry
                     if attempt + 1 < attempts:
                         logger.info(

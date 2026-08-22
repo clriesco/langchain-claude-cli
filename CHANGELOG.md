@@ -1,6 +1,8 @@
 # Changelog
 
-## 1.1.2 — 2026-08-22
+## 1.2.0 — 2026-08-22
+
+A minor, not a patch: it raises the `claude-agent-sdk` floor (see Changed).
 
 ### Fixed
 
@@ -22,6 +24,26 @@
   SDK type. A new test enumerates the SDK's error classes **at runtime** and
   fails if any one of them wraps into something that is not an instance of
   itself — so a class added upstream cannot slip through the same gap again.
+
+### Changed
+
+- **Requires `claude-agent-sdk>=0.2.144`** (was `>=0.2.115`). That release types
+  the CLI's error result itself, as `ResultError(ProcessError)` carrying
+  `subtype`, `errors`, `terminal_reason` and the raw payload — the very thing
+  1.1.0 added `ClaudeCliResultError` for. Supporting both shapes would mean a
+  conditional base class and two different MROs depending on what happened to be
+  installed, which is worse than asking for a version everyone already gets on a
+  fresh install. Upgrade with your usual sync; nothing else changes for you.
+
+### Added
+
+- **`ClaudeCliResultError` now extends the SDK's `ResultError`.** So
+  `except ResultError` and `except ProcessError` catch a `ClaudeCliMaxTurnsError`
+  too, and the SDK's own structured fields ride along with it.
+- **The subtype is read from the SDK before the prose.** `classify_result_error`
+  now prefers the captured `ResultMessage`, then `ResultError.subtype`, and only
+  then falls back to matching the message text. The prose match is the last
+  resort rather than the second one.
 
 ## 1.1.1 — 2026-08-22
 

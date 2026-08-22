@@ -538,3 +538,71 @@ def test_message_parse_error_keeps_data():
     assert isinstance(wrapped, ClaudeCliMessageParseError)
     assert isinstance(wrapped, MessageParseError)
     assert wrapped.data == {"type": "weird"}
+
+
+# ── el SDK 0.2.144 tipa el error result él mismo ─────────────
+
+
+def test_result_errors_keep_the_sdk_result_error_type():
+    """`ClaudeCliResultError` extends the SDK's own `ResultError` (0.2.144+)."""
+    from claude_agent_sdk._errors import ResultError
+
+    exc = ClaudeCliMaxTurnsError(MAX_TURNS_TEXT)
+    assert isinstance(exc, ResultError), "`except ResultError` must still catch it"
+    assert isinstance(exc, ProcessError), "ResultError subclasses ProcessError"
+    assert isinstance(exc, ClaudeCliError)
+    assert str(exc) == MAX_TURNS_TEXT, "exit_code must not be appended"
+
+
+def test_sdk_result_error_wraps_into_our_result_error():
+    from claude_agent_sdk._errors import ResultError
+
+    original = ResultError(
+        MAX_TURNS_TEXT,
+        {
+            "subtype": "error_max_turns",
+            "errors": ["Reached maximum number of turns (25)"],
+        },
+        1,
+    )
+    wrapped = wrap_sdk_error(original)
+    assert isinstance(wrapped, ClaudeCliResultError)
+    assert not isinstance(wrapped, ClaudeCliProcessError), (
+        "a spent run is not a transport failure"
+    )
+    assert str(wrapped) == str(original)
+    assert wrapped.subtype == "error_max_turns"
+    assert wrapped.exit_code == 1
+
+
+def test_raised_sdk_result_error_becomes_the_typed_max_turns(monkeypatch):
+    """What claude-agent-sdk 0.2.144 actually raises, end to end."""
+    from claude_agent_sdk._errors import ResultError
+
+    raised = ResultError(
+        MAX_TURNS_TEXT,
+        {
+            "subtype": "error_max_turns",
+            "errors": ["Reached maximum number of turns (25)"],
+        },
+        1,
+    )
+    llm = _llm(monkeypatch, _result("error_max_turns"), raised)
+    with pytest.raises(ClaudeCliMaxTurnsError) as info:
+        llm.invoke("hi")
+    assert info.value.num_turns == 25
+    assert info.value.total_cost_usd == pytest.approx(0.3612)
+
+
+def test_subtype_comes_from_the_sdk_before_the_prose(monkeypatch):
+    """No ResultMessage captured: read the SDK's subtype, not the wording."""
+    from claude_agent_sdk._errors import ResultError
+
+    raised = ResultError(
+        "Claude Code returned an error result: wording nobody can match on",
+        {"subtype": "error_during_execution"},
+        1,
+    )
+    llm = _llm(monkeypatch, None, raised)
+    with pytest.raises(ClaudeCliExecutionError):
+        llm.invoke("hi")

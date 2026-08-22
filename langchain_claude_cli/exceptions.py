@@ -29,6 +29,7 @@ from claude_agent_sdk._errors import (
     ClaudeSDKError,
     CLIJSONDecodeError,
     MessageParseError,
+    ResultError,
 )
 from langchain_core.messages.ai import UsageMetadata
 
@@ -152,13 +153,30 @@ class ClaudeCliInterruptedError(ClaudeCliError):
 # prose with the structured subtype the CLI already sent.
 
 
-class ClaudeCliResultError(ClaudeCliError):
+class ClaudeCliResultError(ClaudeCliError, ResultError):
     """The CLI completed the run but reported it as failed.
 
     Not a transport failure: the request reached the model and consumed
     budget, so retrying repeats the same run. ``total_cost_usd`` and friends
     are always populated when the ResultMessage was captured.
+
+    Inherits from the SDK's ``ResultError`` (claude-agent-sdk 0.2.144+), which
+    types the same outcome, so ``except ResultError`` and ``except ProcessError``
+    both keep working — and the SDK's own ``subtype`` / ``errors`` /
+    ``terminal_reason`` ride along.
     """
+
+    def __init__(
+        self,
+        message: str,
+        data: dict[str, Any] | None = None,
+        exit_code: int | None = None,
+    ) -> None:
+        # exit_code passed as None on purpose: ProcessError.__init__ appends
+        # "(exit code: N)" to the message, and this message is the CLI's own
+        # text, which consumers may still be matching on. Set it afterwards.
+        ResultError.__init__(self, message, data, None)
+        self.exit_code = exit_code
 
 
 class ClaudeCliMaxTurnsError(ClaudeCliResultError):
@@ -278,14 +296,20 @@ def classify_status(status: int | None, detail: str) -> ClaudeCliError:
 _MAX_TURNS_TEXT = re.compile(r"reached maximum number of turns\s*\((\d+)\)", re.I)
 
 
-def classify_result_error(result: Any, text: str) -> ClaudeCliError:
+def classify_result_error(
+    result: Any, text: str, source: BaseException | None = None
+) -> ClaudeCliError:
     """Type a CLI *error result* from its subtype, falling back to its text.
 
     ``text`` is the SDK's message and is preserved verbatim as the exception
     message, so consumers still matching on that prose keep working while they
     migrate to the types.
+
+    Subtype precedence: the captured ``ResultMessage`` first, then the SDK's
+    own ``ResultError.subtype`` (0.2.144+) when ``source`` carries one, and
+    only then the message text. Prose is the last resort, never the first.
     """
-    subtype = getattr(result, "subtype", None)
+    subtype = getattr(result, "subtype", None) or getattr(source, "subtype", None)
     num_turns = getattr(result, "num_turns", None)
     match = _MAX_TURNS_TEXT.search(text)
 
@@ -319,6 +343,9 @@ _SDK_WRAPPERS: tuple[
 ] = (
     (CLINotFoundError, ClaudeCliNotFoundError, ()),
     (CLIConnectionError, ClaudeCliStartupError, ()),
+    # Before ProcessError: ResultError subclasses it, and this outcome is a
+    # spent run, not a transport failure.
+    (ResultError, ClaudeCliResultError, ("data", "exit_code")),
     (ProcessError, ClaudeCliProcessError, ("exit_code", "stderr")),
     (CLIJSONDecodeError, ClaudeCliJSONDecodeError, ("line", "original_error")),
     (MessageParseError, ClaudeCliMessageParseError, ("data",)),
