@@ -25,7 +25,11 @@ from claude_agent_sdk import (
     CLINotFoundError,
     ProcessError,
 )
-from claude_agent_sdk._errors import ClaudeSDKError
+from claude_agent_sdk._errors import (
+    ClaudeSDKError,
+    CLIJSONDecodeError,
+    MessageParseError,
+)
 from langchain_core.messages.ai import UsageMetadata
 
 from langchain_claude_cli._convert import usage_to_usage_metadata
@@ -195,6 +199,39 @@ class ClaudeCliProcessError(ClaudeCliTransportError, ProcessError):
         Exception.__init__(self, message)
 
 
+class ClaudeCliJSONDecodeError(ClaudeCliTransportError, CLIJSONDecodeError):
+    """The CLI's output could not be decoded (SDK ``CLIJSONDecodeError``).
+
+    Keeps ``line`` and ``original_error``.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        line: str | None = None,
+        original_error: BaseException | None = None,
+    ) -> None:
+        # Not CLIJSONDecodeError.__init__: it derives the message from `line`,
+        # which would discard the one the SDK already composed.
+        self.line = line or ""
+        # The SDK declares this non-optional and always sets it, so a wrapped
+        # instance always carries one; the default exists only so the generic
+        # wrapping path can call every wrapper the same way.
+        self.original_error = original_error  # type: ignore[assignment]
+        Exception.__init__(self, message)
+
+
+class ClaudeCliMessageParseError(ClaudeCliTransportError, MessageParseError):
+    """A message from the CLI could not be parsed (SDK ``MessageParseError``).
+
+    Keeps ``data``.
+    """
+
+    def __init__(self, message: str, data: dict[str, Any] | None = None) -> None:
+        self.data = data
+        Exception.__init__(self, message)
+
+
 class ClaudeCliStartupError(ClaudeCliError, CLIConnectionError):
     """The CLI subprocess could not be started or connected to.
 
@@ -269,13 +306,23 @@ def classify_result_error(result: Any, text: str) -> ClaudeCliError:
     return exc.attach_result(result)
 
 
-# Mapping is ordered most-specific first; CLINotFoundError is a subclass of
-# CLIConnectionError, and ProcessError/CLIConnectionError of ClaudeSDKError.
-_SDK_WRAPPERS: tuple[tuple[type[BaseException], type[ClaudeCliError]], ...] = (
-    (CLINotFoundError, ClaudeCliNotFoundError),
-    (CLIConnectionError, ClaudeCliStartupError),
-    (ProcessError, ClaudeCliProcessError),
-    (ClaudeSDKError, ClaudeCliTransportError),
+# Ordered most-specific first; CLINotFoundError subclasses CLIConnectionError,
+# and every entry above subclasses ClaudeSDKError. The third element names the
+# attributes the SDK class carries, which the wrapper takes after `message`.
+#
+# EVERY concrete SDK error type must appear here with a wrapper that inherits
+# from it. A type that falls through to the generic ClaudeCliTransportError
+# stops satisfying `except <that type>` in consumer code — the exact hole this
+# module exists to close. CLIJSONDecodeError did fall through in 1.1.0 and 1.1.1.
+_SDK_WRAPPERS: tuple[
+    tuple[type[BaseException], type[ClaudeCliError], tuple[str, ...]], ...
+] = (
+    (CLINotFoundError, ClaudeCliNotFoundError, ()),
+    (CLIConnectionError, ClaudeCliStartupError, ()),
+    (ProcessError, ClaudeCliProcessError, ("exit_code", "stderr")),
+    (CLIJSONDecodeError, ClaudeCliJSONDecodeError, ("line", "original_error")),
+    (MessageParseError, ClaudeCliMessageParseError, ("data",)),
+    (ClaudeSDKError, ClaudeCliTransportError, ()),
 )
 
 
@@ -288,16 +335,11 @@ def wrap_sdk_error(exc: BaseException) -> BaseException:
     """
     if isinstance(exc, ClaudeCliError) or not isinstance(exc, ClaudeSDKError):
         return exc
-    for sdk_cls, wrapper_cls in _SDK_WRAPPERS:
+    for sdk_cls, wrapper_cls, attrs in _SDK_WRAPPERS:
         if isinstance(exc, sdk_cls):
-            if wrapper_cls is ClaudeCliProcessError:
-                wrapped: ClaudeCliError = ClaudeCliProcessError(
-                    str(exc),
-                    getattr(exc, "exit_code", None),
-                    getattr(exc, "stderr", None),
-                )
-            else:
-                wrapped = wrapper_cls(str(exc))
+            wrapped: ClaudeCliError = wrapper_cls(
+                str(exc), *(getattr(exc, name, None) for name in attrs)
+            )
             wrapped.sdk_error = exc  # type: ignore[attr-defined]
             wrapped.__cause__ = exc
             return wrapped

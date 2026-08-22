@@ -25,6 +25,7 @@ from langchain_claude_cli import (
     ClaudeCliRateLimitError,
     ClaudeCliResultError,
     ClaudeCliStartupError,
+    ClaudeCliTransportError,
 )
 from langchain_claude_cli.exceptions import wrap_sdk_error
 
@@ -460,3 +461,80 @@ def test_usage_metadata_is_none_without_usage():
     exc = ClaudeCliStartupError(EMFILE_TEXT)
     assert exc.usage is None
     assert exc.usage_metadata is None
+
+
+# ── ningún tipo del SDK puede quedarse sin wrapper ───────────
+
+
+def _sdk_error_classes() -> list[type]:
+    """Every concrete error class the SDK defines, discovered at runtime."""
+    import inspect
+
+    from claude_agent_sdk import _errors as sdk_errors
+    from claude_agent_sdk._errors import ClaudeSDKError
+
+    return [
+        cls
+        for _, cls in inspect.getmembers(sdk_errors, inspect.isclass)
+        if issubclass(cls, ClaudeSDKError) and cls is not ClaudeSDKError
+    ]
+
+
+def _instantiate(cls: type) -> BaseException:
+    """One instance per SDK error class, honouring each constructor."""
+    # MessageParseError is not re-exported by claude_agent_sdk's top level.
+    from claude_agent_sdk._errors import CLIJSONDecodeError, MessageParseError
+
+    if cls is ProcessError:
+        return cls("crashed", 1, "some stderr")
+    if cls is CLIJSONDecodeError:
+        return cls("{malformed", ValueError("boom"))
+    if cls is MessageParseError:
+        return cls("unparseable", {"type": "weird"})
+    return cls("boom")
+
+
+@pytest.mark.parametrize("sdk_cls", _sdk_error_classes(), ids=lambda c: c.__name__)
+def test_every_sdk_error_keeps_its_own_type_when_wrapped(sdk_cls):
+    """Discovered dynamically so a NEW SDK error class fails this test.
+
+    A type that falls through to the generic ClaudeCliTransportError stops
+    satisfying `except <that type>` downstream — which is how CLIJSONDecodeError
+    silently flipped a consumer's retry decision in 1.1.0.
+    """
+    original = _instantiate(sdk_cls)
+    wrapped = wrap_sdk_error(original)
+
+    assert isinstance(wrapped, ClaudeCliError), sdk_cls
+    assert isinstance(wrapped, sdk_cls), (
+        f"{sdk_cls.__name__} lost its own type: `except {sdk_cls.__name__}` "
+        f"would stop catching it (got {type(wrapped).__name__})"
+    )
+    assert str(wrapped) == str(original), sdk_cls
+    assert type(wrapped) is not ClaudeCliTransportError, (
+        f"{sdk_cls.__name__} needs its own wrapper in _SDK_WRAPPERS"
+    )
+
+
+def test_json_decode_error_keeps_line_and_cause():
+    from claude_agent_sdk import CLIJSONDecodeError
+
+    from langchain_claude_cli import ClaudeCliJSONDecodeError
+
+    cause = ValueError("boom")
+    wrapped = wrap_sdk_error(CLIJSONDecodeError("{malformed", cause))
+    assert isinstance(wrapped, ClaudeCliJSONDecodeError)
+    assert isinstance(wrapped, CLIJSONDecodeError)
+    assert wrapped.line == "{malformed"
+    assert wrapped.original_error is cause
+
+
+def test_message_parse_error_keeps_data():
+    from claude_agent_sdk._errors import MessageParseError
+
+    from langchain_claude_cli import ClaudeCliMessageParseError
+
+    wrapped = wrap_sdk_error(MessageParseError("unparseable", {"type": "weird"}))
+    assert isinstance(wrapped, ClaudeCliMessageParseError)
+    assert isinstance(wrapped, MessageParseError)
+    assert wrapped.data == {"type": "weird"}

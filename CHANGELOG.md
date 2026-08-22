@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.1.2 — 2026-08-22
+
+### Fixed
+
+- **`CLIJSONDecodeError` and `MessageParseError` lost their own type when
+  wrapped.** 1.1.0 promised that every wrapper "inherits from both
+  `ClaudeCliError` and the SDK class it replaces". That held for
+  `CLIConnectionError`, `CLINotFoundError` and `ProcessError`, but the other
+  two fell through to the generic `ClaudeCliTransportError`, which does *not*
+  subclass them — so `except CLIJSONDecodeError` quietly stopped catching them.
+
+  Measured downstream: a consumer whose retry policy listed `CLIJSONDecodeError`
+  among the failures **not** worth retrying saw it fall past that branch into a
+  residual `RuntimeError` one, flipping the decision from "give up" to "retry".
+  Exactly the class of silent behaviour change this taxonomy exists to prevent,
+  introduced by the change meant to prevent it.
+
+  There are now `ClaudeCliJSONDecodeError` (keeps `line`, `original_error`) and
+  `ClaudeCliMessageParseError` (keeps `data`), and every wrapper preserves its
+  SDK type. A new test enumerates the SDK's error classes **at runtime** and
+  fails if any one of them wraps into something that is not an instance of
+  itself — so a class added upstream cannot slip through the same gap again.
+
 ## 1.1.1 — 2026-08-22
 
 ### Added

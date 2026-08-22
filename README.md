@@ -206,7 +206,7 @@ Every failure mode is a typed exception, so retry and fallback logic never has t
 | API | `ClaudeCliAuthError` · `ClaudeCliRateLimitError` · `ClaudeCliOverloadedError` |
 | Run | `ClaudeCliTimeoutError` · `ClaudeCliBudgetExceededError` · `ClaudeCliInterruptedError` |
 | CLI error result | `ClaudeCliResultError` → `ClaudeCliMaxTurnsError` · `ClaudeCliExecutionError` |
-| Infrastructure | `ClaudeCliStartupError` → `ClaudeCliNotFoundError` · `ClaudeCliTransportError` → `ClaudeCliProcessError` |
+| Infrastructure | `ClaudeCliStartupError` → `ClaudeCliNotFoundError` · `ClaudeCliTransportError` → `ClaudeCliProcessError` · `ClaudeCliJSONDecodeError` · `ClaudeCliMessageParseError` |
 
 The last two rows are the distinction a batch runner needs: a **result** error consumed budget and will fail the same way if retried, while a **startup** error never reached the model, so the work is safe to requeue. The SDK-derived types also inherit from the SDK class they replace, so an existing `except CLIConnectionError` keeps working.
 
