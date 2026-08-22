@@ -383,3 +383,80 @@ def test_successful_invoke_keeps_its_public_metadata(monkeypatch):
 def test_wrapping_preserves_the_message_verbatim(original):
     """Anything logging or matching str(exc) must see exactly what it saw before."""
     assert str(wrap_sdk_error(original)) == str(original)
+
+
+# ── usage en las dos formas (1.1.1) ──────────────────────────
+
+
+def test_error_exposes_usage_in_langchain_shape(monkeypatch):
+    """`usage` es el dict del CLI; `usage_metadata` es la forma de LangChain."""
+    llm = _llm(monkeypatch, _result("error_max_turns"), Exception(MAX_TURNS_TEXT))
+    with pytest.raises(ClaudeCliMaxTurnsError) as info:
+        llm.invoke("hi")
+    exc = info.value
+
+    # El crudo se conserva intacto: convención de Anthropic, `input_tokens`
+    # cuenta solo los NO cacheados.
+    assert exc.usage["input_tokens"] == 1520
+    assert exc.usage["cache_read_input_tokens"] == 210_000
+
+    # El convertido agrega, que es la convención de LangChain.
+    assert exc.usage_metadata == {
+        "input_tokens": 211_520,
+        "output_tokens": 8400,
+        "total_tokens": 219_920,
+        "input_token_details": {"cache_read": 210_000, "cache_creation": 0},
+    }
+
+
+def test_failure_usage_matches_the_success_path_shape(monkeypatch):
+    """La propiedad que evita el bug: un contador puede sumar ambos caminos.
+
+    Con el mismo `usage`, lo que el fallo expone en `usage_metadata` tiene que
+    ser byte a byte lo que un turno correcto pone en `AIMessage.usage_metadata`.
+    Si divergen, quien acumule tokens a través de éxitos y fallos suma dos
+    convenciones distintas bajo la misma clave `input_tokens`.
+    """
+    from claude_agent_sdk import AssistantMessage, TextBlock
+
+    usage = {
+        "input_tokens": 1520,
+        "output_tokens": 8400,
+        "cache_read_input_tokens": 210_000,
+    }
+
+    ok = SDKResultMessage(
+        subtype="success",
+        duration_ms=1200,
+        duration_api_ms=1100,
+        is_error=False,
+        num_turns=2,
+        session_id="s",
+        total_cost_usd=0.01,
+        usage=usage,
+    )
+
+    def good_query(*, prompt, options):
+        async def gen():
+            if not isinstance(prompt, str):
+                async for _ in prompt:
+                    pass
+            yield AssistantMessage(content=[TextBlock(text="ok")], model="m")
+            yield ok
+
+        return gen()
+
+    monkeypatch.setattr(claude_agent_sdk, "query", good_query)
+    exito = ChatClaudeCli(model="claude-haiku-4-5").invoke("hi").usage_metadata
+
+    fallo = ClaudeCliMaxTurnsError(MAX_TURNS_TEXT).attach_result(
+        _result("error_max_turns")
+    )
+    assert fallo.usage_metadata == exito
+
+
+def test_usage_metadata_is_none_without_usage():
+    """Un arranque fallido no gastó nada: ni crudo, ni convertido, ni 0."""
+    exc = ClaudeCliStartupError(EMFILE_TEXT)
+    assert exc.usage is None
+    assert exc.usage_metadata is None

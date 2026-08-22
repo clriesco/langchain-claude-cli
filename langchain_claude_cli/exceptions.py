@@ -26,6 +26,9 @@ from claude_agent_sdk import (
     ProcessError,
 )
 from claude_agent_sdk._errors import ClaudeSDKError
+from langchain_core.messages.ai import UsageMetadata
+
+from langchain_claude_cli._convert import usage_to_usage_metadata
 
 
 class ClaudeCliError(RuntimeError):
@@ -39,18 +42,35 @@ class ClaudeCliError(RuntimeError):
 
     Attributes:
         result_message: the raw ``ResultMessage``, or None.
-        usage: token usage dict as reported by the CLI, or None.
+        usage: token usage **as the CLI reports it**, or None. Anthropic's
+            convention: ``input_tokens`` counts only the uncached tokens, with
+            ``cache_read_input_tokens`` and ``cache_creation_input_tokens``
+            alongside it. Prefer ``usage_metadata`` unless you specifically
+            want the CLI's own shape.
+        usage_metadata: the same usage in LangChain's shape (1.1.1) — the one
+            ``AIMessage.usage_metadata`` uses on the success path, so a token
+            counter can add successes and failures without reconciling two
+            conventions. ``None`` when ``usage`` is.
         total_cost_usd: cost of the failed run in USD, or None.
         num_turns: agentic turns consumed by the failed run, or None.
         duration_ms: wall-clock duration of the failed run, or None.
         session_id: CLI session the failed run belonged to, or None.
         subtype: the ``ResultMessage`` subtype (e.g. ``"error_max_turns"``).
+
+    Note:
+        ``usage["input_tokens"]`` and ``usage_metadata["input_tokens"]`` are
+        both present and mean **different things**: the first excludes cached
+        tokens, the second is the sum of uncached + cache_read +
+        cache_creation. Mixing them in one counter silently undercounts, and
+        failed runs — which chain the most turns and read the most cache — are
+        where the gap is widest. Pick one shape and stay in it.
     """
 
     # Class-level defaults: reading them is always safe, and adding them here
     # (rather than to __init__) keeps every existing constructor call valid.
     result_message: Any = None
     usage: dict[str, Any] | None = None
+    usage_metadata: UsageMetadata | None = None
     total_cost_usd: float | None = None
     num_turns: int | None = None
     duration_ms: int | None = None
@@ -80,6 +100,10 @@ class ClaudeCliError(RuntimeError):
             value = getattr(result, attr, None)
             if value is not None:
                 setattr(self, attr, value)
+        # Converted here rather than left to the caller: the two shapes share
+        # the key `input_tokens` with different meanings, so every consumer
+        # doing it by hand is a chance to sum the wrong one.
+        self.usage_metadata = usage_to_usage_metadata(self.usage)
         return self
 
     def __reduce__(self) -> tuple[Any, ...]:

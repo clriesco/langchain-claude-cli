@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.1 — 2026-08-22
+
+### Added
+
+- **`usage_metadata` on errors, next to the raw `usage`.** 1.1.0 attached the
+  CLI's own usage dict to the exception, unconverted. That left every consumer
+  reimplementing the conversion — and walking into a trap while doing it: the
+  key `input_tokens` exists in **both** shapes and means different things. The
+  CLI follows Anthropic's convention, where it counts only the uncached tokens
+  and `cache_read_input_tokens` sits beside it; LangChain's `usage_metadata`
+  aggregates the three and breaks them out under `input_token_details`. For one
+  measured agentic run that is 1.520 against 211.520 under the same key.
+
+  Anyone adding failures to the same token counter as successes was therefore
+  undercounting exactly the runs that read the most cache. `exc.usage_metadata`
+  is now the same shape `AIMessage.usage_metadata` uses on the success path —
+  there is a test asserting the two are identical for the same usage — and
+  `exc.usage` still carries the CLI's dict untouched for anyone who wants it.
+  Both are `None` when the run never produced a result.
+
 ## 1.1.0 — 2026-08-22
 
 Four fixes from a production batch run: ~4.100 sites through an agentic loop

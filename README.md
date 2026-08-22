@@ -224,7 +224,9 @@ except ClaudeCliError as exc:
         review.flag(job, turns=exc.num_turns)
 ```
 
-`usage`, `total_cost_usd`, `num_turns`, `duration_ms`, `session_id`, `subtype` and the whole `result_message` are exposed, each `None` when unknown, and they survive pickling.
+`usage_metadata`, `usage`, `total_cost_usd`, `num_turns`, `duration_ms`, `session_id`, `subtype` and the whole `result_message` are exposed, each `None` when unknown, and they survive pickling.
+
+Use `usage_metadata` to count tokens: it is the same shape `AIMessage.usage_metadata` uses on the success path, so successes and failures add up in one counter. `usage` is the CLI's own dict, kept unconverted — note that its `input_tokens` excludes cached tokens while `usage_metadata`'s includes them, so the two must never be mixed under that shared key.
 
 Retries on 429/5xx are handled for you (`max_retries`, default 2) — set `max_retries=0` if your own fallback layer should see the raw error. `response_metadata["rate_limit"]` reports your subscription window as `{status, type, utilization, resets_at}`.
 
