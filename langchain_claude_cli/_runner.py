@@ -109,6 +109,35 @@ def _reraise_wrapped(exc: Exception) -> None:
     raise wrapped.with_traceback(exc.__traceback__) from exc
 
 
+#: Sent when resuming a session would otherwise carry no prompt at all.
+#:
+#: A tool cycle's resume suffix is often *only* tool results, and those ride
+#: the MCP handlers rather than the prompt (see `_build_prompt_entries`), which
+#: left the turn with an empty prompt stream. Claude Code accepted that through
+#: 2.1.234 and re-fired the pending call; from 2.1.235 it exits non-zero with an
+#: EMPTY stderr, orphaning the in-flight control request
+#: ("ProcessTransport is not ready for writing"). Measured against 2.1.241:
+#: every `bind_tools` cycle on a resumed session died at the second turn.
+#:
+#: The text is a trigger, not content: the CLI re-fires the pending call on its
+#: own and the handler delivers the stored result. Blank content works too —
+#: the CLI substitutes its own "continue from where you left off" — but relying
+#: on that substitution means depending on undocumented behaviour, and the
+#: Anthropic API rejects empty text blocks outright.
+_RESUME_CONTINUATION = "Continue from where you left off."
+
+
+def _continuation_entry() -> dict:
+    """A minimal user turn, so a resume never ships an empty prompt stream."""
+    return {
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [{"type": "text", "text": _RESUME_CONTINUATION}],
+        },
+    }
+
+
 _STALE_SESSION_MARKER = "No conversation found with session ID"
 
 
@@ -259,6 +288,11 @@ class _RunnerMixin:
             # Assistant entries in a suffix can't be replayed cheaply — flatten them.
             if any(e["type"] == "assistant" for e in entries):
                 return [flatten_to_single_user(entries)]
+            if not entries:
+                # Nothing left to send once the tool results moved to the
+                # handlers. An empty prompt stream kills the CLI (2.1.235+),
+                # so the turn needs a trigger — see _RESUME_CONTINUATION.
+                return [_continuation_entry()]
             return entries
         user_count = sum(1 for e in entries if e["type"] == "user")
         has_assistant = any(e["type"] == "assistant" for e in entries)

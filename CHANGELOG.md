@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.2.1 — 2026-08-24
+
+### Fixed
+
+- **Tool-calling cycles died on the second turn against Claude Code 2.1.235+.**
+  A tool cycle's resume suffix is often *only* tool results, and those ride the
+  MCP handlers rather than the prompt — so the turn went out with an **empty
+  prompt stream**. The CLI accepted that through 2.1.234 and re-fired the
+  pending call; from 2.1.235 it exits non-zero with an **empty stderr**, so the
+  SDK raises an opaque `ProcessError` ("Check stderr output for details" —
+  there are none) and the in-flight control request is orphaned
+  (`ProcessTransport is not ready for writing`).
+
+  Measured against 2.1.241: every `bind_tools` cycle on a resumed session died
+  at its second turn. A resume that would otherwise carry nothing now sends a
+  minimal continuation turn; the CLI re-fires the pending call on its own and
+  the handler delivers the stored result, exactly as before.
+
+  Found by the nightly contract suite, which had been red since the 2026-08-19
+  run — green on CLI 2.1.233 and 2.1.234, red from 2.1.235. That is what the
+  suite is for, and the failure was a real break in the library rather than a
+  stale test: the same empty prompt the contract test sent by hand is the one
+  the tool path sent in production.
+
 ## 1.2.0 — 2026-08-22
 
 A minor, not a patch: it raises the `claude-agent-sdk` floor (see Changed).

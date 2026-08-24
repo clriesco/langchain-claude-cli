@@ -113,7 +113,19 @@ def test_defer_stops_run_without_executing():
 
 
 def test_resume_refires_pending_tool():
-    """Invariant S1b/D3.5(v0.1): resume re-fires the pending call at the MCP handler."""
+    """Invariant S1b/D3.5(v0.1): resume re-fires the pending call at the MCP handler.
+
+    Contract finding 2026-08-19: the resume needs a non-empty prompt. Through
+    CLI 2.1.234 an empty prompt stream was accepted and re-fired the pending
+    call; from 2.1.235 the CLI exits non-zero with an EMPTY stderr, so the SDK
+    raises an opaque ProcessError and the in-flight control request is orphaned
+    ("ProcessTransport is not ready for writing"). Bisected on the nightly runs:
+    green on 2.1.233/234, red from 2.1.235 through 2.1.241.
+
+    The invariant itself still holds — the CLI does re-fire the pending call —
+    so the library now sends a minimal continuation turn instead of nothing
+    (`_runner._RESUME_CONTINUATION`), and this test sends the same thing.
+    """
     executed: list = []
 
     async def main():
@@ -123,12 +135,19 @@ def test_resume_refires_pending_tool():
         assert r1.stop_reason == "tool_deferred"
         delivered: list = []
 
-        async def empty():
-            return
-            yield
+        async def continuation():
+            yield {
+                "type": "user",
+                "message": {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Continue from where you left off."}
+                    ],
+                },
+            }
 
         _msgs2, r2 = await _run(
-            empty(), _tool_options(delivered, defer=False, resume=r1.session_id)
+            continuation(), _tool_options(delivered, defer=False, resume=r1.session_id)
         )
         return delivered, r2
 

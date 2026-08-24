@@ -9,35 +9,12 @@
   },
   "messages": [
    {
-    "__type__": "RateLimitEvent",
-    "rate_limit_info": {
-     "__type__": "RateLimitInfo",
-     "status": "allowed",
-     "resets_at": 1783781400,
-     "rate_limit_type": "five_hour",
-     "utilization": null,
-     "overage_status": "rejected",
-     "overage_resets_at": null,
-     "overage_disabled_reason": "org_level_disabled",
-     "raw": {
-      "status": "allowed",
-      "resetsAt": 1783781400,
-      "rateLimitType": "five_hour",
-      "overageStatus": "rejected",
-      "overageDisabledReason": "org_level_disabled",
-      "isUsingOverage": false
-     }
-    },
-    "uuid": "22e23c8f-fbfa-4a9e-8b5f-e99b546495f3",
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2"
-   },
-   {
     "__type__": "AssistantMessage",
     "content": [
      {
       "__type__": "ThinkingBlock",
-      "thinking": "The user is asking for the weather in Tokyo and suggesting I use the get_weather function. Let me call that function with \"Tokyo\" as the city parameter.",
-      "signature": "Eo8DCpMBCA8YAipAvVlbfi4nfzrsEIDTW90VuRA8kf/kaAjzJZ6mhQ0hkIIGKxupOAAPd6LvLQUTnkd216e+2kSaAvlpeC5L8HfI2zIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgwZe9U72QNmBs78tk4aDIZlpnLKLM/VmAYwViIwWLy5ry0//QoDAfIgdV628HsqyJyOwSiAx5QL5EzQn1SCx2Bn8DiqVrLGR+xtQcl7KqgBSG45XSpUWHW/kMQwmw1zIdLFfYtCKc9igi7UjaXt7Rwh8FIluvOSXYraVDuPSPKdNSIb1sRM8HlhimNL63YndreQ2LlQWOW2ZN4PrXIHeZ6iHy5+Fk66BFpjeCYFl8Ndp+gJXtBV7YXgGMqm7Ui+8R5yqkyX+V45bpqk3WUQ8wPUvgeKSe3XizqvHMOTR5fXFOCir0lU+QBD1pbv31kOvnuq+20n8h+aGAE="
+      "thinking": "The user is asking me to get the weather in Tokyo using the get_weather function. Let me call that function with \"Tokyo\" as the city parameter.",
+      "signature": "EqUDCrIBCBEYAipA/aLWw/qtoERfRiO8b/njsIAMKmvKIkR5XTZ9ruiZH1UCDmIJmfLPzBhbxA5VjalH1R+Gw3N2L8DpN+dC8ULYvjIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzchCWsq/3ii2m/wOoVwoSkdtdiAEBqAHT6LDUBrABAhIMnhmiN3oHPV3wxg/sGgz00U5+mPiH7pHgeugiMN+7h+zBJaNcatpjE93aXTG+SDdfHLRyRuhDYJhxjsPavPNqSVXdvuLaBmnB6OgaWCqfAeSzinGekpBvrsduiagA34FEtR8rd7qBtD96sKbTuIE3gxTvO3LYsD/+fpOrxzJKNfMQIXFMYGzLqOpteyr4h532r9ngU6YegTHchwHvAMPuIkWl2mhcZJk+YfjN/+4958cPmNwNRta9iBx9P2opLqkzC66q6R7AFKJiHonLdVndIDT9fI5XCJsRpfRfPuFRUoINlGlYCZzyPdzUgGsJahgB"
      }
     ],
     "model": "claude-haiku-4-5-20251001",
@@ -45,27 +22,27 @@
     "error": null,
     "usage": {
      "input_tokens": 10,
-     "cache_creation_input_tokens": 13285,
-     "cache_read_input_tokens": 0,
+     "cache_creation_input_tokens": 864,
+     "cache_read_input_tokens": 12497,
      "cache_creation": {
       "ephemeral_5m_input_tokens": 0,
-      "ephemeral_1h_input_tokens": 13285
+      "ephemeral_1h_input_tokens": 864
      },
      "output_tokens": 4,
      "service_tier": "standard",
      "inference_geo": "not_available"
     },
-    "message_id": "msg_011Ccv4myQmeLiTCbewchApd",
+    "message_id": "msg_011CeMYiru6FdveWmnuwMqty",
     "stop_reason": null,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
-    "uuid": "dd3f55a8-9f22-46dc-ac97-1262946cc13a"
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
+    "uuid": "027eaa3e-93c7-44a9-ba06-55fbd668abe3"
    },
    {
     "__type__": "AssistantMessage",
     "content": [
      {
       "__type__": "ToolUseBlock",
-      "id": "toolu_01Uns9ATtpBCUkF2EkzLpzuS",
+      "id": "toolu_01WyHyaqQNhpjZtMUmxEBY9t",
       "name": "mcp__lc__get_weather",
       "input": {
        "city": "Tokyo"
@@ -77,83 +54,81 @@
     "error": null,
     "usage": {
      "input_tokens": 10,
-     "cache_creation_input_tokens": 13285,
-     "cache_read_input_tokens": 0,
+     "cache_creation_input_tokens": 864,
+     "cache_read_input_tokens": 12497,
      "cache_creation": {
       "ephemeral_5m_input_tokens": 0,
-      "ephemeral_1h_input_tokens": 13285
+      "ephemeral_1h_input_tokens": 864
      },
      "output_tokens": 4,
      "service_tier": "standard",
      "inference_geo": "not_available"
     },
-    "message_id": "msg_011Ccv4myQmeLiTCbewchApd",
+    "message_id": "msg_011CeMYiru6FdveWmnuwMqty",
     "stop_reason": null,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
-    "uuid": "f1d95652-726a-4b97-9f22-1a22db557358"
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
+    "uuid": "44b40ab3-9990-425c-87af-fd744cb89193"
    },
    {
-    "__type__": "AssistantMessage",
-    "content": [
-     {
-      "__type__": "TextBlock",
-      "text": "I encountered an error while trying to fetch the weather for Tokyo. The weather service returned an internal error. This could be a temporary issue with the weather API. \n\nCould you try again in a moment, or would you like me to help you with something else?"
+    "__type__": "RateLimitEvent",
+    "rate_limit_info": {
+     "__type__": "RateLimitInfo",
+     "status": "allowed",
+     "resets_at": 1787580000,
+     "rate_limit_type": "five_hour",
+     "utilization": null,
+     "overage_status": "rejected",
+     "overage_resets_at": null,
+     "overage_disabled_reason": "org_level_disabled",
+     "raw": {
+      "status": "allowed",
+      "resetsAt": 1787580000,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
      }
-    ],
-    "model": "claude-haiku-4-5-20251001",
-    "parent_tool_use_id": null,
-    "error": null,
-    "usage": {
-     "input_tokens": 7,
-     "cache_creation_input_tokens": 701,
-     "cache_read_input_tokens": 12497,
-     "cache_creation": {
-      "ephemeral_5m_input_tokens": 0,
-      "ephemeral_1h_input_tokens": 701
-     },
-     "output_tokens": 2,
-     "service_tier": "standard",
-     "inference_geo": "not_available"
     },
-    "message_id": "msg_011Ccv4n7zwyf8SBGEKjgWyC",
-    "stop_reason": null,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
-    "uuid": "1f188681-de45-42c6-8383-175f59a2feb9"
+    "uuid": "f20a654c-c037-4040-9b42-0e4932ec2f50",
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc"
    },
    {
     "__type__": "ResultMessage",
     "subtype": "success",
-    "duration_ms": 3857,
-    "duration_api_ms": 5409,
+    "duration_ms": 1544,
+    "duration_api_ms": 1505,
     "is_error": false,
     "num_turns": 1,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
     "stop_reason": "tool_deferred",
-    "total_cost_usd": 0.0306087,
+    "total_cost_usd": 0.0034827,
     "usage": {
-     "input_tokens": 17,
-     "cache_creation_input_tokens": 13986,
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 864,
      "cache_read_input_tokens": 12497,
-     "output_tokens": 157,
+     "output_tokens": 99,
+     "output_tokens_details": {
+      "thinking_tokens": 37
+     },
      "server_tool_use": {
       "web_search_requests": 0,
       "web_fetch_requests": 0
      },
      "service_tier": "standard",
      "cache_creation": {
-      "ephemeral_1h_input_tokens": 13986,
+      "ephemeral_1h_input_tokens": 864,
       "ephemeral_5m_input_tokens": 0
      },
      "inference_geo": "not_available",
      "iterations": [
       {
-       "input_tokens": 7,
-       "output_tokens": 57,
+       "input_tokens": 10,
+       "output_tokens": 99,
        "cache_read_input_tokens": 12497,
-       "cache_creation_input_tokens": 701,
+       "cache_creation_input_tokens": 864,
        "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 701
+        "ephemeral_1h_input_tokens": 864
        },
        "type": "message"
       }
@@ -163,31 +138,23 @@
     "result": "",
     "structured_output": null,
     "model_usage": {
-     "claude-haiku-4-5-20251001": {
-      "inputTokens": 525,
-      "outputTokens": 12,
-      "cacheReadInputTokens": 0,
-      "cacheCreationInputTokens": 0,
-      "webSearchRequests": 0,
-      "costUSD": 0.000585,
-      "contextWindow": 200000,
-      "maxOutputTokens": 32000
-     },
      "claude-haiku-4-5": {
-      "inputTokens": 17,
-      "outputTokens": 157,
+      "inputTokens": 10,
+      "outputTokens": 99,
       "cacheReadInputTokens": 12497,
-      "cacheCreationInputTokens": 13986,
+      "cacheCreationInputTokens": 864,
       "webSearchRequests": 0,
-      "costUSD": 0.0300237,
+      "costUSD": 0.0034827,
       "contextWindow": 200000,
-      "maxOutputTokens": 32000
+      "maxOutputTokens": 32000,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty"
      }
     },
     "permission_denials": [],
     "deferred_tool_use": {
      "__type__": "DeferredToolUse",
-     "id": "toolu_01Uns9ATtpBCUkF2EkzLpzuS",
+     "id": "toolu_01WyHyaqQNhpjZtMUmxEBY9t",
      "name": "mcp__lc__get_weather",
      "input": {
       "city": "Tokyo"
@@ -195,14 +162,16 @@
     },
     "errors": null,
     "api_error_status": null,
-    "uuid": "efad255e-1541-430b-80cc-5c4639c1ba8e"
+    "uuid": "2903cb0e-0908-4133-9832-4ef97f5b7d4f",
+    "terminal_reason": "tool_deferred",
+    "origin": null
    }
   ]
  },
  {
   "request": {
    "model": "claude-haiku-4-5",
-   "n_entries": 0,
+   "n_entries": 1,
    "prompt_was_str": false,
    "has_lc_tools": true,
    "resume": true
@@ -213,8 +182,8 @@
     "content": [
      {
       "__type__": "ThinkingBlock",
-      "thinking": "The user is asking me to continue from where I left off. I was trying to get the weather for Tokyo, but the function call resulted in an error. The user is asking me to continue, which likely means they want me to try again or provide some alternative approach.\n\nLet me try calling the weather function again for Tokyo.",
-      "signature": "ErYECpMBCA8YAipAg2D1pVU6suoxIFd0JboIRE62Sa7ZOloueSW08+kko7TAGvFMPDfaLvZ5o5oD2eept50zeRZ0Td0ov4ukQQjH8zIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzEgw8jVrFRdhv31MbiKMaDPdqGwsYhHpyTTBWaCIwc62cKhuI4vO2eGT0fA7IuqW4uu0bOzCPedvs/w1hpfMiSp0T3XZbJgrNWQeT1ZcvKs8CzI/esBFvnMrvvExsO7GTFQAvPaKgOWZ2FOEBk4sbgZxtBxZsGuRx9EllMvuiDuVYMbcnmkLYYaaZzWwgOQVGgsfF25zEIZcZ0gRn8s6dAVuj9EPRigXVMlriZBFGW/9NfI3ej4m2OQDLXJ4NJtpNmJUG/OUCsShdrHz2TSVMTLRvN8UHw3lzpXuGHbM1ODFY0/HdLKJ1ORE5ajs3Yx22+0gCHnzoy/lu3g1svjIHAW76q7i0qNquOXZ0Uxxp3mfr0crg2Wz38BVEZB0ULK5FwcyB29YT+IfivBJdhoM2f/g7i0jFOkfiEdOYGN/Er/nR7kySLwffqJ1PJeDVVp1PQ61xovV8g00zC9lj1Jd1rgRZSSF/rjswMdRzcfFPsLw+NEFdQA54/egXZLP3g8RqxJZWsRh4Pd+cNfzWFJ3GQlh+Mpip0tu6Tvtwc/NgErcYAQ=="
+      "thinking": "The user is asking me to \"continue from where you left off.\" However, I just provided the weather information for Tokyo (25\u00b0C and sunny), which was the complete response to their previous request. There's nothing more to continue from that query.\n\nThe user might be:\n1. Testing if I remember what I just did\n2. Asking me to provide more information about Tokyo's weather\n3. Confused about what was already completed\n4. Asking me to move on to something else\n\nSince the previous task (getting weather for Tokyo) is complete, I should clarify what they'd like me to continue with. There's no incomplete work from my last response.",
+      "signature": "EosHCrIBCBEYAipAwXyD+m05idvt2ezunbw953bQYl3UmUsavtoB0PQGV1Yq5eP/AwyKKcMzrN6gJDwC7wRn6Fnu+ppNDAbu7t/cOTIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzchCWsq/3ii2m/wOoVwoSkdtdiAEBqAHX6LDUBrABAhIMvMqE+dF0DVx6vWiBGgyE5igLrSLxGGY20hciMGoQr5nweoi083jU/oAjSJd5LYLZzYNAYvpWQt0rK6UYcy3nbyIFV0Y0THPcH6aK0yqFBeWas9V4q1qUJRKZXLtNxXqQGks2ogNLa3cZkT8hfT6j/wQsizDACLW8kljvAstcanu4Sc++aDQaPYpq1ponD8uB5daQ7OqPrAYsFigraoFm7RJbST6di+yzvBlRDOsGm8UhcdOCqmBWqRvSTo1ee2mcWoZuhYMBDlE2ccTosi5kePrNbI3I2jPhD5IOqfQ+exsVtDPBPoarcEX5ApGjL61UqmLx3lXlRTbyvwuskbm+7MGeHeb4KVAxxRVFdqpzRXzslRzWfDGdCKbnSOemdA0IWYMxfq71rs77U6rtmV/AnBgcZTGsLYKQyLhsUSJK2D4f8nG3SfkcbhzrWYlk1WTqyq9yAqh6GPg3Xh8SG/2g9i0kzY/UwtPvncfJI9j38DhxcPko+LYViVtNJvYSUd/z8V9ozUn3FeafWjx33kH4W5vy7bH1t8AvezuU2zw+24MZ9ubEe65b4bJnQPhGP3mKwSq8rhToZfuzK8YSz1yjX0/JFbQKhBrmCQh9JiwrTeNaE4VY2RGPtnwKirJb1Hxj3iG292lxUFC3EtIoUw7DLo6JCA+mbo5ZK8OtQrHsXvdFIBw1MTu5su7QU60s4uYi7ZGNZN4FZQzDii3R0jMMkm8QS9ZGPU5niBpSrn8MQevkuP0nqvr5UeBUY/PN5DRH/waofXlxdEWdcYaxRyC2oLNWCdRrtXqiPx/jC/nHakq1UgbEW7w58jR8C84jEj1qZD6uYshrDh6UIn4h6lUaPMiGnqhbJXuQWMPmpwnz+IC8kvg+heyqmg6dmtb1jqmCUxhZnkTYq5eZILOev1UG7GAmqg4JnuMSt0hGVeFJpxBS5Q1uE2/yEkGdD+qWA++T+rVMsRgB"
      }
     ],
     "model": "claude-haiku-4-5-20251001",
@@ -222,31 +191,27 @@
     "error": null,
     "usage": {
      "input_tokens": 10,
-     "cache_creation_input_tokens": 155,
-     "cache_read_input_tokens": 13285,
+     "cache_creation_input_tokens": 135,
+     "cache_read_input_tokens": 13361,
      "cache_creation": {
       "ephemeral_5m_input_tokens": 0,
-      "ephemeral_1h_input_tokens": 155
+      "ephemeral_1h_input_tokens": 135
      },
      "output_tokens": 4,
      "service_tier": "standard",
      "inference_geo": "not_available"
     },
-    "message_id": "msg_011Ccv4nM7VMcNWFDmCkGKM4",
+    "message_id": "msg_011CeMYj796aLt7Bbx3fYU7w",
     "stop_reason": null,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
-    "uuid": "f88be964-0095-4ec5-98d4-1625a59de332"
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
+    "uuid": "477f58ed-4d0a-4d0a-a770-ee79a02e9b93"
    },
    {
     "__type__": "AssistantMessage",
     "content": [
      {
-      "__type__": "ToolUseBlock",
-      "id": "toolu_01LAH1eL86s2Cwi2CuwTKLvs",
-      "name": "mcp__lc__get_weather",
-      "input": {
-       "city": "Tokyo"
-      }
+      "__type__": "TextBlock",
+      "text": "I just retrieved the weather for Tokyo and provided a complete answer: **25\u00b0C and sunny**. That was the full result of your previous request!\n\nIs there something else you'd like me to help you with? I'm ready to:\n- Check weather for another location\n- Help you with Railway project management\n- Assist with any other tasks\n\nWhat would you like to do next?"
      }
     ],
     "model": "claude-haiku-4-5-20251001",
@@ -254,27 +219,27 @@
     "error": null,
     "usage": {
      "input_tokens": 10,
-     "cache_creation_input_tokens": 155,
-     "cache_read_input_tokens": 13285,
+     "cache_creation_input_tokens": 135,
+     "cache_read_input_tokens": 13361,
      "cache_creation": {
       "ephemeral_5m_input_tokens": 0,
-      "ephemeral_1h_input_tokens": 155
+      "ephemeral_1h_input_tokens": 135
      },
      "output_tokens": 4,
      "service_tier": "standard",
      "inference_geo": "not_available"
     },
-    "message_id": "msg_011Ccv4nM7VMcNWFDmCkGKM4",
+    "message_id": "msg_011CeMYj796aLt7Bbx3fYU7w",
     "stop_reason": null,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
-    "uuid": "6ccc28c0-42dc-4040-9929-862ac6e4121a"
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
+    "uuid": "34adeb5c-7ac3-413d-b270-1333397f79ba"
    },
    {
     "__type__": "RateLimitEvent",
     "rate_limit_info": {
      "__type__": "RateLimitInfo",
      "status": "allowed",
-     "resets_at": 1783781400,
+     "resets_at": 1787580000,
      "rate_limit_type": "five_hour",
      "utilization": null,
      "overage_status": "rejected",
@@ -282,103 +247,206 @@
      "overage_disabled_reason": "org_level_disabled",
      "raw": {
       "status": "allowed",
-      "resetsAt": 1783781400,
+      "resetsAt": 1787580000,
       "rateLimitType": "five_hour",
       "overageStatus": "rejected",
       "overageDisabledReason": "org_level_disabled",
       "isUsingOverage": false
      }
     },
-    "uuid": "3ace801d-755a-463f-9048-93030b8082c1",
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2"
-   },
-   {
-    "__type__": "AssistantMessage",
-    "content": [
-     {
-      "__type__": "TextBlock",
-      "text": "Great! Here's the weather for Tokyo:\n\n**Tokyo Weather:** 25\u00b0C (77\u00b0F) and sunny \u2600\ufe0f\n\nNice conditions in Tokyo today!"
-     }
-    ],
-    "model": "claude-haiku-4-5-20251001",
-    "parent_tool_use_id": null,
-    "error": null,
-    "usage": {
-     "input_tokens": 6,
-     "cache_creation_input_tokens": 145,
-     "cache_read_input_tokens": 13198,
-     "cache_creation": {
-      "ephemeral_5m_input_tokens": 0,
-      "ephemeral_1h_input_tokens": 145
-     },
-     "output_tokens": 1,
-     "service_tier": "standard",
-     "inference_geo": "not_available"
-    },
-    "message_id": "msg_011Ccv4nWTovTWo8G42gLozu",
-    "stop_reason": null,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
-    "uuid": "905ccc38-c148-4597-b415-518f630f9860"
+    "uuid": "b7d985d0-d9b5-4548-a7f7-8ecb19a1c92e",
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc"
    },
    {
     "__type__": "ResultMessage",
     "subtype": "success",
-    "duration_ms": 3689,
-    "duration_api_ms": 3654,
+    "duration_ms": 3164,
+    "duration_api_ms": 3112,
     "is_error": false,
-    "num_turns": 2,
-    "session_id": "005dfb79-6f1f-4ba4-bc91-9211fe9875a2",
+    "num_turns": 1,
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
     "stop_reason": "end_turn",
-    "total_cost_usd": 0.0041293,
+    "total_cost_usd": 0.0027861,
     "usage": {
-     "input_tokens": 16,
-     "cache_creation_input_tokens": 300,
-     "cache_read_input_tokens": 26483,
-     "output_tokens": 173,
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 135,
+     "cache_read_input_tokens": 13361,
+     "output_tokens": 234,
+     "output_tokens_details": {
+      "thinking_tokens": 146
+     },
      "server_tool_use": {
       "web_search_requests": 0,
       "web_fetch_requests": 0
      },
      "service_tier": "standard",
      "cache_creation": {
-      "ephemeral_1h_input_tokens": 300,
+      "ephemeral_1h_input_tokens": 135,
       "ephemeral_5m_input_tokens": 0
      },
      "inference_geo": "not_available",
      "iterations": [
       {
-       "input_tokens": 6,
-       "output_tokens": 39,
-       "cache_read_input_tokens": 13198,
-       "cache_creation_input_tokens": 145,
+       "input_tokens": 10,
+       "output_tokens": 234,
+       "cache_read_input_tokens": 13361,
+       "cache_creation_input_tokens": 135,
        "cache_creation": {
         "ephemeral_5m_input_tokens": 0,
-        "ephemeral_1h_input_tokens": 145
+        "ephemeral_1h_input_tokens": 135
        },
        "type": "message"
       }
      ],
      "speed": "standard"
     },
-    "result": "Great! Here's the weather for Tokyo:\n\n**Tokyo Weather:** 25\u00b0C (77\u00b0F) and sunny \u2600\ufe0f\n\nNice conditions in Tokyo today!",
+    "result": "I just retrieved the weather for Tokyo and provided a complete answer: **25\u00b0C and sunny**. That was the full result of your previous request!\n\nIs there something else you'd like me to help you with? I'm ready to:\n- Check weather for another location\n- Help you with Railway project management\n- Assist with any other tasks\n\nWhat would you like to do next?",
     "structured_output": null,
     "model_usage": {
      "claude-haiku-4-5": {
-      "inputTokens": 16,
-      "outputTokens": 173,
-      "cacheReadInputTokens": 26483,
-      "cacheCreationInputTokens": 300,
+      "inputTokens": 10,
+      "outputTokens": 234,
+      "cacheReadInputTokens": 13361,
+      "cacheCreationInputTokens": 135,
       "webSearchRequests": 0,
-      "costUSD": 0.0041293,
+      "costUSD": 0.0027861,
       "contextWindow": 200000,
-      "maxOutputTokens": 32000
+      "maxOutputTokens": 32000,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty"
      }
     },
     "permission_denials": [],
     "deferred_tool_use": null,
     "errors": null,
     "api_error_status": null,
-    "uuid": "b6928e59-3a4d-4e0b-8fa0-3ce4405b31b8"
+    "uuid": "ffd59555-756a-4915-a6ca-d3f0d67f763b",
+    "terminal_reason": "completed",
+    "origin": null
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "ThinkingBlock",
+      "thinking": "The user is asking me to \"continue from where you left off\" again. But I've already completed the task they asked for (getting the weather in Tokyo). \n\nLooking back at the conversation:\n1. User asked for weather in Tokyo - I got it: 25C sunny\n2. User asked to continue - I explained that task was complete and asked what's next\n3. Now they're asking again to continue\n\nThis seems like they might be testing me, or there might be some context I'm missing. But based on the conversation history, there is genuinely nothing incomplete to \"continue\" from. The weather lookup was successful and complete.\n\nI should politely reiterate that the previous task is complete and ask for clarification on what they'd like me to do next.",
+      "signature": "EuoHCrIBCBEYAipANyR3czIcyKejK76CsSByp5u25abRYmRdpqRaN3UmBeXnUreNW876eXs26zO2H6tXaq1K9C3PyRQmaB2zTQEtzjIZY2xhdWRlLWhhaWt1LTQtNS0yMDI1MTAwMTgAQgh0aGlua2luZ1okMDA4ZDg3MWYtNDVlNi00ODNjLTkzYmQtOGQxNGI5NDEyMTUzchCWsq/3ii2m/wOoVwoSkdtdiAEBqAHa6LDUBrABAhIMXmGMJZT0kTxYp9PyGgx/6OGvxnCN+T5KxxMiMNKs6BK3sq/vR+MhCapDUrgFRZIuhWNAdrlkmNKL4RtYZ+CU9NjQ3+LnjfMN4Cbu1yrkBWXwN1tN2kwQDYlcfcMS037rSMQ8rTOwjryOy1Vl++eeyWsf97dG+gosJ5mTEL+rvEQzKNwERmiQpuY9dEd8WklJU9KYeHYY61TiHB6NtzsKz3gNiTIwks0XmfRFN8vln97U57WxFguCNGmL2DcyDh9veSdw0TIzDLVCyShfBwLV9gim+wRKdKkgCRR8uE9baQXXrdr1eLBsYdGWCreYj5mPwxRBqO/xgW7TKGUPvpiubSZHehc0186ddSgR1T/mU847gmfH2HNNs4Mv2AOrUki0mQ/52Ji+Ze/3BBHWx905lzDKVJKWUfA8XxutWcQYaa04FPrO1UII04Wbxjm/3bKanUIGVKoda7MqWtB/hjhI7Xh50aRLAG3M8gszRJC92Ml3Cx3Xo7b7RentHlTMbTBTgE8w6AZfhkTFiFzZ0NrdClxZr+/PSv+1mwjygOkz1N34l+zhPKzIB1CVi3nrldDDdhfRarcWE/dEKG6isOMlk33/w4FHqkKcCvo9e0uQ4ZCpEPEgYWX9nt2CS+pn5f7+g9gmbmP4FSTTerlDZWR1gkbUREhTIL3f1DW1eJZCW5yIia7scmMifIZ8Ua1husBkrR85voM9xb5ZjREouDO0M409WUn8mr+8iRuF8uAHMYEqN4wc3VuRsSNiC0X+jCvF1aDzpKkPn054ZwmKoW7ZP9J4ugFZZrIx5SU7DA9gxHpiaQwGVxZrdfYQzyKR+p27S/t6gE4ljo04cklza75rdt94QuVAWOMp+yCsndC8tKmkOORPy7cKUo2EIO+xdh5+Njx1YnbsYP0stmAUrhfyHwGETBnl0Isdc4q6249jTid8oQCcxV9SqyzzuNASYfY837YB2RR4n1kBc/SitGXUBnbwvAfQHbYgjXWO3tsNfNImcQZiAGrltEqYWrCp+eLjY2QrEK3qzKLtNoAkAmkiFVp28z0gLLR9cb9hPS+Bzfmz5P0FSYwttLdsibcK4EUdmXS7GAE="
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 280,
+     "cache_read_input_tokens": 13496,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 280
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011CeMYjLXkknWfzZ9tmSKTn",
+    "stop_reason": null,
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
+    "uuid": "d9607afa-9230-4180-905f-a151a6c5e4da"
+   },
+   {
+    "__type__": "AssistantMessage",
+    "content": [
+     {
+      "__type__": "TextBlock",
+      "text": "I've already completed your previous request! Here's what happened:\n\n**Weather Query Result:**\n- **Location:** Tokyo\n- **Temperature:** 25\u00b0C\n- **Condition:** Sunny\n\nThere's nothing left to continue from that task\u2014it's fully finished. \n\nIf you'd like me to do something else, please let me know what you'd like to work on next! I'm here to help with:\n- Weather information for other cities\n- Railway platform management\n- Or any other assistance you need\n\nWhat would you like me to do?"
+     }
+    ],
+    "model": "claude-haiku-4-5-20251001",
+    "parent_tool_use_id": null,
+    "error": null,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 280,
+     "cache_read_input_tokens": 13496,
+     "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 280
+     },
+     "output_tokens": 4,
+     "service_tier": "standard",
+     "inference_geo": "not_available"
+    },
+    "message_id": "msg_011CeMYjLXkknWfzZ9tmSKTn",
+    "stop_reason": null,
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
+    "uuid": "142e93be-c5b5-4359-8670-a1bb4c0a5595"
+   },
+   {
+    "__type__": "ResultMessage",
+    "subtype": "success",
+    "duration_ms": 3857,
+    "duration_api_ms": 6955,
+    "is_error": false,
+    "num_turns": 1,
+    "session_id": "6cc10d65-ccc1-4662-bd3e-8670660e86fc",
+    "stop_reason": "end_turn",
+    "total_cost_usd": 0.006175699999999999,
+    "usage": {
+     "input_tokens": 10,
+     "cache_creation_input_tokens": 280,
+     "cache_read_input_tokens": 13496,
+     "output_tokens": 294,
+     "output_tokens_details": {
+      "thinking_tokens": 169
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 280,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 10,
+       "output_tokens": 294,
+       "cache_read_input_tokens": 13496,
+       "cache_creation_input_tokens": 280,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 280
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "result": "I've already completed your previous request! Here's what happened:\n\n**Weather Query Result:**\n- **Location:** Tokyo\n- **Temperature:** 25\u00b0C\n- **Condition:** Sunny\n\nThere's nothing left to continue from that task\u2014it's fully finished. \n\nIf you'd like me to do something else, please let me know what you'd like to work on next! I'm here to help with:\n- Weather information for other cities\n- Railway platform management\n- Or any other assistance you need\n\nWhat would you like me to do?",
+    "structured_output": null,
+    "model_usage": {
+     "claude-haiku-4-5": {
+      "inputTokens": 20,
+      "outputTokens": 528,
+      "cacheReadInputTokens": 26857,
+      "cacheCreationInputTokens": 415,
+      "webSearchRequests": 0,
+      "costUSD": 0.006175699999999999,
+      "contextWindow": 200000,
+      "maxOutputTokens": 32000,
+      "canonicalModel": "claude-haiku-4-5",
+      "provider": "firstParty"
+     }
+    },
+    "permission_denials": [],
+    "deferred_tool_use": null,
+    "errors": null,
+    "api_error_status": null,
+    "uuid": "fde1913b-cf75-4b58-a573-f1b367fcc9ee",
+    "terminal_reason": "completed",
+    "origin": null
    }
   ]
  }
